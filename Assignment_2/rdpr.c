@@ -8,11 +8,9 @@
 #include <unistd.h>
 #include <ctype.h>
 #include <sys/stat.h>
-#include <fcntl.h>
-#include <time.h>
-#include <termios.h>
-#include <pthread.h>
-#include "helper.h"
+
+#include "global.h"
+
 
 int main(int argc, char const *argv[])
 {
@@ -62,7 +60,12 @@ int main(int argc, char const *argv[])
 	    }
 	    
 	    buffer[MAX_PACKET_SIZE - 1] = '\0';	
-		//handle incoming request   
+		//handle incoming request
+		socket_info my_socket;
+		my_socket.sock_fdesc = socket_udp;
+		my_socket.socket = sockd;
+
+		segment_handle(buffer,my_socket);   
 	
 	}
 

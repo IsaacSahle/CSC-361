@@ -8,13 +8,8 @@
 #include <unistd.h>
 #include <ctype.h>
 #include <sys/stat.h>
-#include <fcntl.h>
-#include <time.h>
-#include <termios.h>
-#include <pthread.h>
 
-
-
+#include "global.h"
 
 int main(int argc, char const *argv[])
 {
@@ -49,6 +44,30 @@ int main(int argc, char const *argv[])
 	    close(socket_udp);
     	exit(EXIT_FAILURE);
 	}
+
+	char buffer[MAX_PACKET_SIZE];
+	ssize_t recieved;
+	
+	while(1){
+
+		memset(buffer,0,MAX_PACKET_SIZE);
+		recieved = recvfrom(socket_udp,(void*)buffer,MAX_PACKET_SIZE,0, (struct sockaddr*)&sockd,&socket_length);			
+
+		if (recieved < 0) {
+	      	    fprintf(stderr, "recvfrom failed\n");
+	      	    exit(EXIT_FAILURE);
+	    }
+	    
+	    buffer[MAX_PACKET_SIZE - 1] = '\0';	
+		//handle incoming request
+		socket_info my_socket;
+		my_socket.sock_fdesc = socket_udp;
+		my_socket.socket = sockd;
+
+		segment_handle(buffer,my_socket);   
+	
+	}
+
 
 	close(socket_udp);
 
