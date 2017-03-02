@@ -65,7 +65,7 @@ int main(int argc, char const *argv[])
 		my_socket.sock_fdesc = socket_udp;
 		my_socket.socket = sockd;
 
-		segment_handle(buffer,my_socket);   
+		segment_handle(buffer,my_socket,RECIEVER);   
 	
 	}
 
