@@ -12,25 +12,50 @@
 #include "global.h"
 
 segment * buffer_to_segment(char * buffer){
+	char * token;
+	segment * seg = (segment *) malloc(sizeof(segment));
+	token = strtok(buffer," ");
+	strcpy(seg->magic,token);
+	token = strtok(buffer," ");
+	strcpy(seg->type,token);
+	token = strtok(buffer," ");
+	seg->sequence_num = (int) strtol(token,(char **)NULL,10);
+	token = strtok(buffer," ");
+	seg->ack_num = (int) strtol(token,(char **)NULL,10);
+	token = strtok(buffer," ");
+	seg->payload_len = (int) strtol(token,(char **)NULL,10);
+	token = strtok(buffer," ");
+	seg->window = (int) strtol(token,(char **)NULL,10);
+	token = strtok(buffer,"");
+	seg->data = (char *) malloc(seg->payload_len + 1);
+	strcpy(seg->data,token);
 
-return NULL;
+	return seg;
 }
 
 char * segment_to_buffer(segment my_segment){
 
-return NULL;
+//check to see if packet is valid
+char * buffer = (char *) malloc(MAX_PACKET_SIZE + 1);
+memset(buffer,0,MAX_PACKET_SIZE + 1);
+
+sprintf(buffer,"%s %s %d %d %d %d %s\n",my_segment.magic,my_segment.type,my_segment.sequence_num,my_segment.ack_num,my_segment.payload_len,my_segment.window,my_segment.data);
+
+return buffer;
 }
 
-void segment_handle(char * buffer, socket_info my_socket, int flag){
+int segment_handle(char * buffer, socket_info my_socket, int flag){
 	//convert buffer to segment: memory is allocated REMEMBER TO FREE!
 	segment * my_segment = buffer_to_segment(buffer);
 	//determine what kind of packet
-	if(strcmp(my_segment->type,"DAT") == 0 && flag != SENDER){
+	if(my_segment == NULL){
+		return 0;
+	}else if(strcmp(my_segment->type,"DAT") == 0 && flag != SENDER){
 	//DAT
 
 
 	}else if(strcmp(my_segment->type,"ACK") == 0 && flag != RECIEVER){
-	//ACK: shouldn't be recieving ack segment
+	//ACK:
 
 
 	}else if(strcmp(my_segment->type,"SYN") == 0 && flag != SENDER){
@@ -59,4 +84,5 @@ void segment_handle(char * buffer, socket_info my_socket, int flag){
 
 	//Free segment memory
 	//free(my_segment);
+	return 1;
 }

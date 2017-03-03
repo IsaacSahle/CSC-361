@@ -11,7 +11,8 @@
 
 #include "global.h"
 
-void server_connect(const char * ip_address,int port,socket_info dest_sockd);
+int server_connect(const char * ip_address,int port,socket_info dest_sockd);
+int timeout_recvfrom (int sock, char *buf, struct sockaddr_in *connection, socklen_t * length ,int timeoutinseconds);
 
 int main(int argc, char const *argv[])
 {
@@ -31,7 +32,7 @@ int main(int argc, char const *argv[])
 	memset(&sockd, 0, sizeof sockd);
 	sockd.sin_family = AF_INET;
 	sockd.sin_port = htons(send_port_number);
-	sockd.sin_addr.s_addr = htonl(INADDR_ANY);
+	sockd.sin_addr.s_addr = htonl(INADDR_ANY); //possibly change!!
 	socklen_t socket_length = sizeof sockd; 
 	
 	int option = 1;
@@ -56,7 +57,13 @@ int main(int argc, char const *argv[])
 	socket_info info;
 	info.socket = sockd;
 	info.sock_fdesc = socket_udp;
-	server_connect(argv[3],dest_port_number,info);
+	
+	if(!server_connect(argv[3],dest_port_number,info)){
+		//exit gracefully
+		close(socket_udp);
+	    fprintf(stderr, "FAILED TO CONNECT TO SERVER\n");
+  	    exit(EXIT_FAILURE);
+	}
 
 	while(1){
 
@@ -88,7 +95,7 @@ int main(int argc, char const *argv[])
 
 
 
-void server_connect(const char * ip_address,int port, socket_info dest_sockd){
+int server_connect(const char * ip_address,int port, socket_info dest_sockd){
 //Fire off SYN packet
 
 //Setup socket
@@ -97,9 +104,12 @@ inet_aton(ip_address,&dest_sockd.socket.sin_addr);
 
 //create segment
 segment synchro;
+socklen_t socket_length = sizeof dest_sockd.socket; 
+char buff[MAX_PACKET_SIZE];
 strcpy(synchro.magic,"CSC361");
 strcpy(synchro.type,"SYN");
-synchro.sequence_num = 100; //NOTE: select random sequence num
+synchro.sequence_num = 100; //NOTE: select random sequence num > 10 (window size)
+sender_sequence_number = synchro.sequence_num; //set global sequence 
 synchro.ack_num = 0; //irrelevant
 synchro.payload_len = 0;
 synchro.window = (MAX_PACKET_SIZE * WINDOW_SIZE); //bytes
@@ -108,6 +118,41 @@ char * buffer = segment_to_buffer(synchro);
 
 sendto((dest_sockd.sock_fdesc),(void *)buffer,(strlen(buffer) + 1),0,(struct sockaddr*)&(dest_sockd.socket),(sizeof dest_sockd.socket));
 
-//listen for reply and confirm it.
+//free(buffer)
 
+//listen for reply and confirm it.
+//start timer
+memset(buff,0,MAX_PACKET_SIZE);
+if(timeout_recvfrom((dest_sockd.sock_fdesc),buff,&(dest_sockd.socket),&socket_length,CONNECTION_TIMEOUT)){
+	//buff has data verify the packet has syn and ack flag set and 
+	buff[MAX_PACKET_SIZE - 1] = '\0';
+	
+	segment * init = buffer_to_segment(buff);
+	if(strcmp(init->type,"ACK") == 0 && init->sequence_num == sender_sequence_number && init->ack_num == sender_sequence_number + 1){
+	//ACK:
+		//free(init)
+		return 1;
+	}
+	//free(init)
+}
+
+return 0;
+
+}
+
+//http://stackoverflow.com/questions/12713438/how-to-add-delay-to-sento-and-recvfrom-in-udp-client-server-in-c
+int timeout_recvfrom (int sock, char *buf, struct sockaddr_in *connection, socklen_t * length ,int timeoutinseconds)
+{
+    fd_set socks;
+    struct timeval t;
+    FD_ZERO(&socks);
+    FD_SET(sock, &socks);
+    t.tv_sec = timeoutinseconds;
+    if (select(sock + 1, &socks, NULL, NULL, &t) &&
+        recvfrom(sock,(void *)buf, MAX_PACKET_SIZE, 0, (struct sockaddr *)connection, length)!=-1)
+        {
+        return 1;
+        }
+    else
+        return 0;
 }
