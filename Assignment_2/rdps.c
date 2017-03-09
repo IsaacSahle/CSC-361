@@ -144,7 +144,9 @@ int timeout_recvfrom (int sock, char *buf, struct sockaddr_in *connection, sockl
     FD_ZERO(&socks);
     FD_SET(sock, &socks);
     t.tv_sec = timeoutinseconds;
-    if (select(sock + 1, &socks, NULL, NULL, &t) != -1 && recvfrom(sock,(void *)buf, MAX_PACKET_SIZE, 0, (struct sockaddr *)connection, length) != -1)
+  	printf("%d\n",select(sock + 1, &socks, NULL, NULL, &t));
+    //select(sock + 1, &socks, NULL, NULL, &t) != -1 && 
+    if (recvfrom(sock,(void *)buf, MAX_PACKET_SIZE, 0, (struct sockaddr *)connection, length) != -1)
         return 1;
     else
         return 0;
