@@ -106,7 +106,7 @@ sender_sequence_number = synchro.sequence_num; //set global sequence
 synchro.ack_num = 0; //irrelevant
 synchro.payload_len = 0;
 synchro.window = 0;
-synchro.data = (char *) calloc(1,sizeof char);
+synchro.data = (char *) calloc(1,sizeof(char));
 strcpy(synchro.data,"");
 
 char * packet = segment_to_buffer(synchro);
@@ -119,7 +119,7 @@ memset(buff,0,MAX_PACKET_SIZE);
 if(timeout_recvfrom(socket_udp,buff,&(socket),&length,CONNECTION_TIMEOUT)){
 	//buff has data verify the packet has syn and ack flag set and 
 	buff[MAX_PACKET_SIZE - 1] = '\0';
-	
+	printf("%s\n",buff);
 	segment * init = buffer_to_segment(buff);
 	if(strcmp(init->type,"ACK") == 0 && init->sequence_num == sender_sequence_number && init->ack_num == sender_sequence_number + 1){
 	//ACK:
@@ -144,11 +144,8 @@ int timeout_recvfrom (int sock, char *buf, struct sockaddr_in *connection, sockl
     FD_ZERO(&socks);
     FD_SET(sock, &socks);
     t.tv_sec = timeoutinseconds;
-    if (select(sock + 1, &socks, NULL, NULL, &t) &&
-        recvfrom(sock,(void *)buf, MAX_PACKET_SIZE, 0, (struct sockaddr *)connection, length)!=-1)
-        {
+    if (select(sock + 1, &socks, NULL, NULL, &t) != -1 && recvfrom(sock,(void *)buf, MAX_PACKET_SIZE, 0, (struct sockaddr *)connection, length) != -1)
         return 1;
-        }
     else
         return 0;
 }
