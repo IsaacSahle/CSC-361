@@ -110,6 +110,7 @@ synchro.data = (char *) calloc(1,sizeof(char));
 strcpy(synchro.data,"");
 
 char * packet = segment_to_buffer(synchro);
+free(synchro.data);
 sendto(socket_udp,(void *)packet,(strlen(packet) + 1),0,(struct sockaddr*)&(socket),(length));
 free(packet);
 
