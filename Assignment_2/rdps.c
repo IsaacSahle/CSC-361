@@ -11,7 +11,7 @@
 
 #include "global.h"
 
-int server_connect(const char * ip_address,int port,socket_info dest_sockd);
+int server_connect(int socket_udp,struct sockaddr_in socket,socklen_t length);
 int timeout_recvfrom (int sock, char *buf, struct sockaddr_in *connection, socklen_t * length ,int timeoutinseconds);
 
 int main(int argc, char const *argv[])
@@ -22,18 +22,24 @@ int main(int argc, char const *argv[])
 	}
 
 	int socket_udp = socket(PF_INET,SOCK_DGRAM,IPPROTO_UDP);
-	char * ptr_1;
-	char * ptr_2;
-	int send_port_number = strtol(argv[2],&ptr_1,10);
-	int dest_port_number = strtol(argv[4],&ptr_2,10);
+	char * ptr;
+	int sender_port_number = strtol(argv[2],&ptr,10);
+	int reciever_port_number = strtol(argv[4],&ptr,10);
 	//create socket structure
-	struct sockaddr_in sockd;
+	struct sockaddr_in sender;
+	struct sockaddr_in reciever;
 	//set all fields
-	memset(&sockd, 0, sizeof sockd);
-	sockd.sin_family = AF_INET;
-	sockd.sin_port = htons(send_port_number);
-	sockd.sin_addr.s_addr = htonl(INADDR_ANY); //possibly change!!
-	socklen_t socket_length = sizeof sockd; 
+	memset(&sender, 0, sizeof sender);
+	sender.sin_family = AF_INET;
+	sender.sin_port = htons(sender_port_number);
+	sender.sin_addr.s_addr = inet_addr(argv[1]);
+	socklen_t sender_socket_length = sizeof sender;
+
+	memset(&reciever, 0, sizeof reciever);
+	reciever.sin_family = AF_INET;
+	reciever.sin_port = htons(reciever_port_number);
+	reciever.sin_addr.s_addr = inet_addr(argv[3]);
+	socklen_t reciever_socket_length = sizeof reciever;  
 	
 	int option = 1;
 	//set socket option 
@@ -43,7 +49,7 @@ int main(int argc, char const *argv[])
     	exit(EXIT_FAILURE);
 	}
 	//bind socket
-	if(bind(socket_udp,(struct sockaddr *)&sockd, sizeof sockd) == -1){
+	if(bind(socket_udp,(struct sockaddr *)&sender, sizeof sender) == -1){
        	//bind failed
 	    fprintf(stderr,"Binding failed\n");	
 	    close(socket_udp);
@@ -54,21 +60,13 @@ int main(int argc, char const *argv[])
 
 	char buffer[MAX_PACKET_SIZE];
 	ssize_t recieved;
-	socket_info info;
-	info.socket = sockd;
-	info.sock_fdesc = socket_udp;
-	
-	if(!server_connect(argv[3],dest_port_number,info)){
-		//exit gracefully
-		close(socket_udp);
-	    fprintf(stderr, "FAILED TO CONNECT TO SERVER\n");
-  	    exit(EXIT_FAILURE);
-	}
+	//keep trying to connect to server
+	while(!server_connect(socket_udp,reciever,reciever_socket_length)){}
 
-	while(1){
+	/*while(1){
 
 		memset(buffer,0,MAX_PACKET_SIZE);
-		recieved = recvfrom(socket_udp,(void*)buffer,MAX_PACKET_SIZE,0, (struct sockaddr*)&sockd,&socket_length);			
+		recieved = recvfrom(socket_udp,(void*)buffer,MAX_PACKET_SIZE,0, (struct sockaddr*)&sender,&sender_socket_length);			
 
 		if (recieved < 0) {
 	      	    fprintf(stderr, "recvfrom failed\n");
@@ -79,11 +77,11 @@ int main(int argc, char const *argv[])
 		//handle incoming request
 		socket_info my_socket;
 		my_socket.sock_fdesc = socket_udp;
-		my_socket.socket = sockd;
+		my_socket.socket = sender;
 
 		segment_handle(buffer,my_socket,SENDER);   
 	
-	}
+	}*/
 
 
 	close(socket_udp);
@@ -95,16 +93,11 @@ int main(int argc, char const *argv[])
 
 
 
-int server_connect(const char * ip_address,int port, socket_info dest_sockd){
+int server_connect(int socket_udp,struct sockaddr_in socket,socklen_t length){
 //Fire off SYN packet
-
-//Setup socket
-dest_sockd.socket.sin_port = htons(port);
-inet_aton(ip_address,&dest_sockd.socket.sin_addr);
 
 //create segment
 segment synchro;
-socklen_t socket_length = sizeof dest_sockd.socket; 
 char buff[MAX_PACKET_SIZE];
 strcpy(synchro.magic,"CSC361");
 strcpy(synchro.type,"SYN");
@@ -112,28 +105,30 @@ synchro.sequence_num = 100; //NOTE: select random sequence num > 10 (window size
 sender_sequence_number = synchro.sequence_num; //set global sequence 
 synchro.ack_num = 0; //irrelevant
 synchro.payload_len = 0;
-synchro.window = (MAX_PACKET_SIZE * WINDOW_SIZE); //bytes
+synchro.window = 0;
 strcpy(synchro.data,"");
-char * buffer = segment_to_buffer(synchro);
 
-sendto((dest_sockd.sock_fdesc),(void *)buffer,(strlen(buffer) + 1),0,(struct sockaddr*)&(dest_sockd.socket),(sizeof dest_sockd.socket));
-
-//free(buffer)
+char * packet = segment_to_buffer(synchro);
+sendto(socket_udp,(void *)packet,(strlen(packet) + 1),0,(struct sockaddr*)&(socket),(length));
+free(packet);
 
 //listen for reply and confirm it.
 //start timer
 memset(buff,0,MAX_PACKET_SIZE);
-if(timeout_recvfrom((dest_sockd.sock_fdesc),buff,&(dest_sockd.socket),&socket_length,CONNECTION_TIMEOUT)){
+if(timeout_recvfrom(socket_udp,buff,&(socket),&length,CONNECTION_TIMEOUT)){
 	//buff has data verify the packet has syn and ack flag set and 
 	buff[MAX_PACKET_SIZE - 1] = '\0';
 	
 	segment * init = buffer_to_segment(buff);
 	if(strcmp(init->type,"ACK") == 0 && init->sequence_num == sender_sequence_number && init->ack_num == sender_sequence_number + 1){
 	//ACK:
-		//free(init)
+		free(init->data);
+		free(init);
 		return 1;
 	}
-	//free(init)
+
+	free(init->data);
+	free(init);
 }
 
 return 0;

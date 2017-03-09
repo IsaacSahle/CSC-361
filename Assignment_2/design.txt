@@ -1,0 +1,6 @@
+1. My RDP header fields will only contain all the mandatory fields from the assignment description.
+	ex: "CSC361 DAT 2048 0 1024 9216\r\n\r\n"
+
+2. Connection is established through the sender who sends a SYN packet to the reciever. The sequence number of this packet is chosen randomly using the C random number generator. The reciever sends an ACK packet with acknowledgement number being the initial sequence number plus one. The connection is then established once the sender recieves the ACK packet. To tear down the connection the sender will send the FIN packet, and the FIN packet retransmission timer will be started. The reciver will send an ACK for this FIN and have wait a certian amount of time for any FIN retransmission in the event that the ACK was lost on the way to the sender. If after the TIME_WAIT no FIN has been recieved it is safe to close the connection. The RST packet will be sent in the case of an unrecoverable error. 
+
+3. Flow control will be implemented using the Go Back N algorithm. The reciever will have a fixed window size of 10 segments (10240 bytes) and the reciever's window size will be 1 segment (1024  bytes). 

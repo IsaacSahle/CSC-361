@@ -4,7 +4,7 @@
 #define WINDOW_SIZE 10 //segments
 #define SENDER 1
 #define RECIEVER 0
-#define CONNECTION_TIMEOUT 5 //seconds 
+#define CONNECTION_TIMEOUT 2 //seconds 
 
 int sender_sequence_number;
 int reciever_sequence_number;

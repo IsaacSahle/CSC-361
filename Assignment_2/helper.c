@@ -63,7 +63,7 @@ int segment_handle(char * buffer, socket_info my_socket, int flag){
 	segment acknowledment_seg;
 	strcpy(acknowledment_seg.magic,"CSC361");
 	strcpy(acknowledment_seg.type,"ACK");
-	acknowledment_seg.sequence_num = 100; //NOTE: select random sequence num
+	acknowledment_seg.sequence_num = 0;
 	acknowledment_seg.ack_num = my_segment->sequence_num + 1; //double check this logic is correct
 	acknowledment_seg.payload_len = 0;
 	acknowledment_seg.window = (MAX_PACKET_SIZE * WINDOW_SIZE); //bytes
@@ -72,7 +72,7 @@ int segment_handle(char * buffer, socket_info my_socket, int flag){
 	//send acknowledgment	
 	sendto((my_socket.sock_fdesc),(void *)reply,(strlen(reply) + 1),0,(struct sockaddr*)&(my_socket.socket),(sizeof my_socket.socket));
 
-	//free(reply);
+	free(reply);
 
 	}else if(strcmp(my_segment->type,"FIN") == 0 && flag != SENDER){
 	//FIN:
@@ -83,6 +83,7 @@ int segment_handle(char * buffer, socket_info my_socket, int flag){
 	}
 
 	//Free segment memory
-	//free(my_segment);
+	free(my_segment->data);
+	free(my_segment);
 	return 1;
 }

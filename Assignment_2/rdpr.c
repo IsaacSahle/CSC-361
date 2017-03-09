@@ -28,7 +28,7 @@ int main(int argc, char const *argv[])
 	memset(&sockd, 0, sizeof sockd);
 	sockd.sin_family = AF_INET;
 	sockd.sin_port = htons(port_number);
-	sockd.sin_addr.s_addr = htonl(INADDR_ANY); //possibly change!!!
+	sockd.sin_addr.s_addr = inet_addr(argv[1]);
 	socklen_t socket_length = sizeof sockd; 
 	
 	int option = 1;
