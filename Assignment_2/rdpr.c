@@ -46,7 +46,7 @@ int main(int argc, char const *argv[])
     	exit(EXIT_FAILURE);
 	}
 
-	char buffer[MAX_PACKET_SIZE];
+	char buffer[MAX_PACKET_SIZE + 1];
 	ssize_t recieved;
 
 	while(1){
@@ -65,6 +65,7 @@ int main(int argc, char const *argv[])
 		my_socket.sock_fdesc = socket_udp;
 		my_socket.socket = sockd;
 
+		printf("RECIEVED INFO: %s",buffer);
 		segment_handle(buffer,my_socket,RECIEVER);   
 	
 	}

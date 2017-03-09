@@ -58,7 +58,7 @@ int main(int argc, char const *argv[])
 
 
 
-	char buffer[MAX_PACKET_SIZE];
+	char buffer[MAX_PACKET_SIZE + 1];
 	ssize_t recieved;
 	//keep trying to connect to server
 	server_connect(socket_udp,reciever,reciever_socket_length);
@@ -98,7 +98,7 @@ int server_connect(int socket_udp,struct sockaddr_in socket,socklen_t length){
 
 //create segment
 segment synchro;
-char buff[MAX_PACKET_SIZE];
+char buff[MAX_PACKET_SIZE + 1];
 strcpy(synchro.magic,"CSC361");
 strcpy(synchro.type,"SYN");
 synchro.sequence_num = 100; //NOTE: select random sequence num > 10 (window size)

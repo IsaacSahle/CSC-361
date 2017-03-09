@@ -10,8 +10,8 @@ int sender_sequence_number;
 int reciever_sequence_number;
 
 typedef struct {
-	char magic[MAGIC_LENGTH]; //One possible value: CSC361
-	char type[FLAG_LENGTH]; //All flags same size
+	char magic[MAGIC_LENGTH + 1]; //One possible value: CSC361
+	char type[FLAG_LENGTH + 1]; //All flags same size
 	int sequence_num; 
 	int ack_num;
 	int payload_len;
