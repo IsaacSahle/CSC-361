@@ -137,6 +137,8 @@ while(1){
 	      	    fprintf(stderr, "recvfrom failed\n");
 	      	    exit(EXIT_FAILURE);
 	    }
+	    
+	    printf("%s\n",buff);
 	    segment * init = buffer_to_segment(buff);
 		//check for corrupt ACK 
 		if(init == NULL){
@@ -153,8 +155,6 @@ while(1){
 
 	}
 }
-
-printf("%s\n",buff);
 
 return 0;
 
