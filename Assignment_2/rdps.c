@@ -61,7 +61,7 @@ int main(int argc, char const *argv[])
 	char buffer[MAX_PACKET_SIZE];
 	ssize_t recieved;
 	//keep trying to connect to server
-	while(!server_connect(socket_udp,reciever,reciever_socket_length)){}
+	server_connect(socket_udp,reciever,reciever_socket_length);
 
 	/*while(1){
 
@@ -114,8 +114,31 @@ sendto(socket_udp,(void *)packet,(strlen(packet) + 1),0,(struct sockaddr*)&(sock
 free(packet);
 
 //listen for reply and confirm it.
-//start timer
+//fcntl(socket_udp, F_SETFL, O_NONBLOCK);
+fd_set socks;
+struct timeval t;
+t.tv_sec = CONNECTION_TIMEOUT;
+t.tv_usec = 0;
 memset(buff,0,MAX_PACKET_SIZE);
+ssize_t recieved;
+while(1){
+	FD_ZERO(&socks);
+	FD_SET(socket_udp, &socks);
+	select(socket_udp + 1, &socks, NULL, NULL, &t);
+
+	if (FD_ISSET(socket_udp, &socks)){
+		recieved = recvfrom(socket_udp,(void *)buff, MAX_PACKET_SIZE, 0, (struct sockaddr *)&(socket),&length);
+		if (recieved < 0) {
+	      	    fprintf(stderr, "recvfrom failed\n");
+	      	    exit(EXIT_FAILURE);
+	    }
+
+	    break;
+	}
+}
+
+printf("%s\n",buff);
+/*memset(buff,0,MAX_PACKET_SIZE);
 if(timeout_recvfrom(socket_udp,buff,&(socket),&length,CONNECTION_TIMEOUT)){
 	//buff has data verify the packet has syn and ack flag set and 
 	buff[MAX_PACKET_SIZE - 1] = '\0';
@@ -130,7 +153,7 @@ if(timeout_recvfrom(socket_udp,buff,&(socket),&length,CONNECTION_TIMEOUT)){
 
 	free(init->data);
 	free(init);
-}
+}*/
 
 return 0;
 
