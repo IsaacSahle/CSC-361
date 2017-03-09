@@ -7,7 +7,9 @@
 #define CONNECTION_TIMEOUT 2 //seconds 
 
 int sender_sequence_number;
-int reciever_sequence_number;
+int request_number;
+int sequence_base;
+int sequence_max;
 
 typedef struct {
 	char magic[MAGIC_LENGTH + 1]; //One possible value: CSC361

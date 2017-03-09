@@ -36,7 +36,10 @@ segment * buffer_to_segment(char * buffer){
 	token = strtok(NULL," ");
 	//printf("%s\n",token);
 	seg->window = (int) strtol(token,(char **)NULL,10);
+	
+	//trim whitespace tokens
 	token = strtok(NULL,"");
+	token = token + 2;
 	//printf("%s\n",token);
 	seg->data = (char *) malloc(seg->payload_len + 1);
 	strcpy(seg->data,token);
@@ -50,7 +53,7 @@ char * segment_to_buffer(segment my_segment){
 char * buffer = (char *) malloc(MAX_PACKET_SIZE + 1);
 memset(buffer,0,MAX_PACKET_SIZE + 1);
 
-sprintf(buffer,"%s %s %d %d %d %d %s\n",my_segment.magic,my_segment.type,my_segment.sequence_num,my_segment.ack_num,my_segment.payload_len,my_segment.window,my_segment.data);
+sprintf(buffer,"%s %s %d %d %d %d\n\n%s",my_segment.magic,my_segment.type,my_segment.sequence_num,my_segment.ack_num,my_segment.payload_len,my_segment.window,my_segment.data);
 
 return buffer;
 }
@@ -68,7 +71,28 @@ fprintf(stdout,"%s %s %d %d %d %d %s\n",my_segment->magic,my_segment->type,my_se
 		return 0;
 	}else if(strcmp(my_segment->type,"DAT") == 0 && flag != SENDER){
 	//DAT
+		
+		if(my_segment->sequence_num == request_number){
+			segment acknowledment_seg;
+			strcpy(acknowledment_seg.magic,"CSC361");
+			strcpy(acknowledment_seg.type,"ACK");
+			acknowledment_seg.sequence_num = 0;
 
+			request_number = (my_segment->sequence_num == request_number)?request_number + my_segment->payload_len:request_number; //possibly add 1024
+			acknowledment_seg.ack_num =request_number;	
+
+			acknowledment_seg.payload_len = 0;
+			acknowledment_seg.window = (MAX_PACKET_SIZE * WINDOW_SIZE); //bytes
+			acknowledment_seg.data = (char *) calloc(1,sizeof(char));
+			strcpy(acknowledment_seg.data,"");
+			char * reply = segment_to_buffer(acknowledment_seg);
+			//send acknowledgment	
+			sendto((my_socket.sock_fdesc),(void *)reply,(strlen(reply) + 1),0,(struct sockaddr*)&(my_socket.socket),(sizeof my_socket.socket));
+			free(acknowledment_seg.data);
+			free(reply);
+		}else{
+			//duplicate or out of order segment 
+		}
 
 	}else if(strcmp(my_segment->type,"ACK") == 0 && flag != RECIEVER){
 	//ACK:
@@ -81,7 +105,8 @@ fprintf(stdout,"%s %s %d %d %d %d %s\n",my_segment->magic,my_segment->type,my_se
 	strcpy(acknowledment_seg.magic,"CSC361");
 	strcpy(acknowledment_seg.type,"ACK");
 	acknowledment_seg.sequence_num = 0;
-	acknowledment_seg.ack_num = my_segment->sequence_num + 1; //double check this logic is correct
+	acknowledment_seg.ack_num = my_segment->sequence_num + 1;
+	request_number = my_segment->sequence_num + 1;
 	acknowledment_seg.payload_len = 0;
 	acknowledment_seg.window = (MAX_PACKET_SIZE * WINDOW_SIZE); //bytes
 	acknowledment_seg.data = (char *) calloc(1,sizeof(char));

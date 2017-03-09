@@ -49,6 +49,22 @@ int main(int argc, char const *argv[])
 	char buffer[MAX_PACKET_SIZE + 1];
 	ssize_t recieved;
 
+	/*N  = window size
+	Rn = request number
+	Sn = sequence number
+	Sb = sequence base
+	Sm = sequence max
+
+	Receiver:
+	Rn = 0
+	Do the following forever:
+	If the packet received = Rn and the packet is error free
+	        Accept the packet and send it to a higher layer
+	        Rn = Rn + 1
+	Else
+	        Refuse packet
+	Send a Request for Rn*/
+	
 	while(1){
 
 		memset(buffer,0,MAX_PACKET_SIZE);

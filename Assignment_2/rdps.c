@@ -62,27 +62,58 @@ int main(int argc, char const *argv[])
 	char buffer[MAX_PACKET_SIZE + 1];
 	ssize_t recieved;
 	//keep trying to connect to server
+	sequence_max = MAX_PACKET_SIZE - 1;
 	server_connect(socket_udp,reciever,reciever_socket_length);
 
-	/*while(1){
+	//fcntl(socket_udp, F_SETFL, O_NONBLOCK);
+	/*
+	N  = window size
+	Rn = request number
+	Sn = sequence number
+	Sb = sequence base
+	Sm = sequence max
+	       
+	Sender:
+	Sb = 0	=> sequenceBase
+	Sm = N − 1
+	Repeat the following steps forever:
+	1. If you receive a request number where Rn > Sb 
+	        Sm = (Sm - Sb) + Rn
+	        Sb = Rn
+	2.  If no packet is in transmission, 
+	        Transmit a packet where Sb <= Sn <= Sm.  
+	        Packets are transmitted in order.*/
+	//open file 	
+	FILE * fp;
+	fp = fopen(argv[5],"r");
+	if(fp == NULL){
+		fprintf(stderr, "ERROR: CANNOT OPEN FILE\n");
+		exit(EXIT_FAILURE);
+	}
+	int sent_packets = 0;
+	while(1){
 
 		memset(buffer,0,MAX_PACKET_SIZE);
 		recieved = recvfrom(socket_udp,(void*)buffer,MAX_PACKET_SIZE,0, (struct sockaddr*)&sender,&sender_socket_length);			
+		//possibly just if, no else 
+		if(recieved > 0){
+			//recieved data 
+			buffer[MAX_PACKET_SIZE - 1] = '\0';	
+			//handle incoming request
+			socket_info my_socket;
+			my_socket.sock_fdesc = socket_udp;
+			my_socket.socket = sender;
 
-		if (recieved < 0) {
-	      	    fprintf(stderr, "recvfrom failed\n");
-	      	    exit(EXIT_FAILURE);
-	    }
-	    
-	    buffer[MAX_PACKET_SIZE - 1] = '\0';	
-		//handle incoming request
-		socket_info my_socket;
-		my_socket.sock_fdesc = socket_udp;
-		my_socket.socket = sender;
-
-		segment_handle(buffer,my_socket,SENDER);   
+			segment_handle(buffer,my_socket,SENDER);
+			sent_packets--;
+		}else if(sent_packets <= WINDOW_SIZE){
+			//send packet 
+			segment data;
+			sent_packets++;
+		}
+	       
 	
-	}*/
+	}
 
 
 	close(socket_udp);
@@ -104,9 +135,10 @@ strcpy(synchro.magic,"CSC361");
 strcpy(synchro.type,"SYN");
 
 srand(time(NULL));   // should only be called once
-synchro.sequence_num = (rand() % 100000) + 10; //NOTE: select random sequence num > 10 (window size)
+synchro.sequence_num = (rand() % 10000) + 10; //NOTE: select random sequence num > 10 (window size)
 //synchro.sequence_num = 100; 
-sender_sequence_number = synchro.sequence_num; //set global sequence 
+sender_sequence_number = synchro.sequence_num; //set global sequence
+sequence_base = synchro.sequence_num;
 synchro.ack_num = 0; //irrelevant
 synchro.payload_len = 0;
 synchro.window = 0;
@@ -138,7 +170,7 @@ while(1){
 	      	    exit(EXIT_FAILURE);
 	    }
 	    
-	    printf("%s\n",buff);
+	    //printf("%s\n",buff);
 	    segment * init = buffer_to_segment(buff);
 		//check for corrupt ACK 
 		if(init == NULL){
