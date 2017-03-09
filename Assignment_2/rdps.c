@@ -8,6 +8,7 @@
 #include <unistd.h>
 #include <ctype.h>
 #include <sys/stat.h>
+#include <time.h>
 
 #include "global.h"
 
@@ -101,7 +102,10 @@ segment synchro;
 char buff[MAX_PACKET_SIZE + 1];
 strcpy(synchro.magic,"CSC361");
 strcpy(synchro.type,"SYN");
-synchro.sequence_num = 100; //NOTE: select random sequence num > 10 (window size)
+
+srand(time(NULL));   // should only be called once
+synchro.sequence_num = (rand() % 100000) + 10; //NOTE: select random sequence num > 10 (window size)
+//synchro.sequence_num = 100; 
 sender_sequence_number = synchro.sequence_num; //set global sequence 
 synchro.ack_num = 0; //irrelevant
 synchro.payload_len = 0;
@@ -133,45 +137,25 @@ while(1){
 	      	    fprintf(stderr, "recvfrom failed\n");
 	      	    exit(EXIT_FAILURE);
 	    }
+	    segment * init = buffer_to_segment(buff);
+		//check for corrupt ACK 
+		if(init == NULL){
+			continue;
+		}else if(strcmp(init->type,"ACK") == 0 && init->ack_num == sender_sequence_number + 1){
+		//ACK:
+			free(init->data);
+			free(init);
+	    	break;
+		}
 
-	    break;
+		free(init->data);
+		free(init);
+
 	}
 }
 
 printf("%s\n",buff);
-/*memset(buff,0,MAX_PACKET_SIZE);
-if(timeout_recvfrom(socket_udp,buff,&(socket),&length,CONNECTION_TIMEOUT)){
-	//buff has data verify the packet has syn and ack flag set and 
-	buff[MAX_PACKET_SIZE - 1] = '\0';
-	printf("%s\n",buff);
-	segment * init = buffer_to_segment(buff);
-	if(strcmp(init->type,"ACK") == 0 && init->sequence_num == sender_sequence_number && init->ack_num == sender_sequence_number + 1){
-	//ACK:
-		free(init->data);
-		free(init);
-		return 1;
-	}
-
-	free(init->data);
-	free(init);
-}*/
 
 return 0;
 
-}
-
-//http://stackoverflow.com/questions/12713438/how-to-add-delay-to-sento-and-recvfrom-in-udp-client-server-in-c
-int timeout_recvfrom (int sock, char *buf, struct sockaddr_in *connection, socklen_t * length ,int timeoutinseconds)
-{
-    fd_set socks;
-    struct timeval t;
-    FD_ZERO(&socks);
-    FD_SET(sock, &socks);
-    t.tv_sec = timeoutinseconds;
-  	printf("%d\n",select(sock + 1, &socks, NULL, NULL, &t));
-    //select(sock + 1, &socks, NULL, NULL, &t) != -1 && 
-    if (recvfrom(sock,(void *)buf, MAX_PACKET_SIZE, 0, (struct sockaddr *)connection, length) != -1)
-        return 1;
-    else
-        return 0;
 }

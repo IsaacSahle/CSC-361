@@ -12,29 +12,32 @@
 #include "global.h"
 
 segment * buffer_to_segment(char * buffer){
-	printf("%s\n",buffer);
+
+	/*if(strlen(buffer) < MAX_PACKET_SIZE)
+		return NULL;*/
+
 	char * token;
 	segment * seg = (segment *) malloc(sizeof(segment));
 	token = strtok(buffer," ");
-	printf("%s\n",token);
+	//printf("%s\n",token);
 	strcpy(seg->magic,token);
 	token = strtok(NULL," ");
-	printf("%s\n",token);
+	//printf("%s\n",token);
 	strcpy(seg->type,token);
 	token = strtok(NULL," ");
-	printf("%s\n",token);
+	//printf("%s\n",token);
 	seg->sequence_num = (int) strtol(token,(char **)NULL,10);
 	token = strtok(NULL," ");
-	printf("%s\n",token);
+	//printf("%s\n",token);
 	seg->ack_num = (int) strtol(token,(char **)NULL,10);
 	token = strtok(NULL," ");
-	printf("%s\n",token);
+	//printf("%s\n",token);
 	seg->payload_len = (int) strtol(token,(char **)NULL,10);
 	token = strtok(NULL," ");
-	printf("%s\n",token);
+	//printf("%s\n",token);
 	seg->window = (int) strtol(token,(char **)NULL,10);
 	token = strtok(NULL,"");
-	printf("%s\n",token);
+	//printf("%s\n",token);
 	seg->data = (char *) malloc(seg->payload_len + 1);
 	strcpy(seg->data,token);
 
@@ -54,9 +57,9 @@ return buffer;
 
 int segment_handle(char * buffer, socket_info my_socket, int flag){
 	//convert buffer to segment: memory is allocated REMEMBER TO FREE!
-	printf("HELLO\n");
+	//printf("HELLO\n");
 	segment * my_segment = buffer_to_segment(buffer);
-	printf("HELLO\n");
+	//printf("HELLO\n");
 	
 fprintf(stdout,"%s %s %d %d %d %d %s\n",my_segment->magic,my_segment->type,my_segment->sequence_num,my_segment->ack_num,my_segment->payload_len,my_segment->window,my_segment->data);
 
@@ -73,7 +76,7 @@ fprintf(stdout,"%s %s %d %d %d %d %s\n",my_segment->magic,my_segment->type,my_se
 
 	}else if(strcmp(my_segment->type,"SYN") == 0 && flag != SENDER){
 	//SYN: create acknowledment segment	
-	printf("HEREE\n");
+	//printf("HEREE\n");
 	segment acknowledment_seg;
 	strcpy(acknowledment_seg.magic,"CSC361");
 	strcpy(acknowledment_seg.type,"ACK");
