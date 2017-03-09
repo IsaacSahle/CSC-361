@@ -106,6 +106,7 @@ sender_sequence_number = synchro.sequence_num; //set global sequence
 synchro.ack_num = 0; //irrelevant
 synchro.payload_len = 0;
 synchro.window = 0;
+synchro.data = (char *) calloc(1,sizeof char);
 strcpy(synchro.data,"");
 
 char * packet = segment_to_buffer(synchro);
