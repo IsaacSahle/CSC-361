@@ -6,7 +6,7 @@
 #define RECIEVER 0
 #define CONNECTION_TIMEOUT 2 //seconds
 #define MAX 10	//SAME SIZE AS WINDOW!!
-#define PACKET_TIMEOUT 2.0
+#define PACKET_TIMEOUT 2
  
 
 int sender_sequence_number;

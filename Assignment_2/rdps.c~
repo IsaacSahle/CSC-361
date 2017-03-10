@@ -263,3 +263,11 @@ void display()
 
 
 
+
+
+ int timeval_subtract (result, x, y){
+   
+ }
+
+
+

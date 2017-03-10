@@ -130,20 +130,3 @@ fprintf(stdout,"%s %s %d %d %d %d %s\n",my_segment->magic,my_segment->type,my_se
 	free(my_segment);
 	return 1;
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
