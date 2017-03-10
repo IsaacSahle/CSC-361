@@ -9,11 +9,25 @@
 #include <ctype.h>
 #include <sys/stat.h>
 #include <time.h>
+#include <fcntl.h>
+#include <sys/time.h>
 
 #include "global.h"
 
+
+//queue data_structure
+queue_packet * queue_array[MAX];
+int rear = - 1;
+int front = - 1;
+
+
 int server_connect(int socket_udp,struct sockaddr_in socket,socklen_t length);
 int timeout_recvfrom (int sock, char *buf, struct sockaddr_in *connection, socklen_t * length ,int timeoutinseconds);
+int size();
+void enqueue(queue_packet * add_seg);
+queue_packet * dequeue();
+queue_packet * peek();
+void display();
 
 int main(int argc, char const *argv[])
 {
@@ -215,7 +229,7 @@ return 0;
 
 
 //http://www.sanfoundry.com/c-program-queue-using-array/
-void enqueue(segment * add_seg){
+void enqueue(queue_packet * add_seg){
 
     if (rear == MAX - 1){
     printf("Queue Overflow \n");
@@ -245,7 +259,7 @@ int size(){
   return (front - rear) >= 0?(front - rear):0; 
 }
 
-segment * peek(){
+queue_packet * peek(){
     return (front == - 1) ? NULL:queue_array[front];   
 }
 

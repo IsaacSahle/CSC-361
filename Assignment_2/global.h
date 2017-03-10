@@ -14,11 +14,6 @@ int request_number;
 int sequence_base;
 int sequence_max;
 
-//queue data_structure
-queue_packet * queue_array[MAX];
-int rear = - 1;
-int front = - 1;
-
 typedef struct {
 	char magic[MAGIC_LENGTH + 1]; //One possible value: CSC361
 	char type[FLAG_LENGTH + 1]; //All flags same size

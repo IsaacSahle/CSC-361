@@ -6,18 +6,13 @@
 #define RECIEVER 0
 #define CONNECTION_TIMEOUT 2 //seconds
 #define MAX 10	//SAME SIZE AS WINDOW!!
-#define PACKET_TIMEOUT 2
+#define PACKET_TIMEOUT 2.0
  
 
 int sender_sequence_number;
 int request_number;
 int sequence_base;
 int sequence_max;
-
-//queue data_structure
-queue_packet * queue_array[MAX];
-int rear = - 1;
-int front = - 1;
 
 typedef struct {
 	char magic[MAGIC_LENGTH + 1]; //One possible value: CSC361
@@ -38,6 +33,11 @@ typedef struct {
 	segment * packet;
 	struct timeval * timestamp;
 } queue_packet;
+
+//queue data_structure
+queue_packet * queue_array[MAX];
+int rear = - 1;
+int front = - 1;
 
 segment * buffer_to_segment(char * buffer);
 char * segment_to_buffer(segment my_segment);
