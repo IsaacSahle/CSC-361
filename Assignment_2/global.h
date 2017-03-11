@@ -1,4 +1,5 @@
 #define MAX_PACKET_SIZE 1024
+#define PAYLOAD_LENGTH 980 //bytes
 #define FLAG_LENGTH 3
 #define MAGIC_LENGTH 6
 #define WINDOW_SIZE 10 //segments
@@ -32,6 +33,7 @@ typedef struct {
 typedef struct {
 	segment * packet;
 	struct timeval * timestamp;
+	char buffer[MAX_PACKET_SIZE + 1];
 } queue_packet;
 
 segment * buffer_to_segment(char * buffer);

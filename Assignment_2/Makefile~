@@ -1,0 +1,9 @@
+all: clean create
+
+test: clean create run
+
+create:
+	gcc -Wall rdps.c helper.c -o rdps
+	gcc -Wall rdpr.c helper.c -o rdpr 
+clean:
+	rm -f rdps rdpr

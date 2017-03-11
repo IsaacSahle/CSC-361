@@ -5,6 +5,6 @@
 
 3. Flow control will be implemented using the Go Back N algorithm. The reciever will have a fixed window size of 10 segments (10240 bytes) and the reciever's window size will be 1 segment (1024  bytes). I read and write from the file using a file pointer. Since the reciever has a fixed window of 1, the reciever does not need to manage a buffer and this guarantees correct packet order. If an out of order segment is recieved, it is dropped. On the sender size, I manage the buffer using an array 10 segments long. Each segment withing the array is timestamped. If an ack is recieved before the segment in the array times out then the segment is removed from the array, else the segment times out and is retransmitted.
 
-4. I use timestamps for each individual segment. If any segment times out before I recieve the cooresponding acknowledgment from the reciever, I know that something has gone wrong and therfore I retransmit from that point on. In terms of packet ordering, the reciever window size is 1 which stated above gaurantees packet ordering. So in short, all packets will arrive (retransmitted if lost) and will arrive in order.
+4.
 
-5. Do we have to take into consideration packet corruption, I have heard mixed opinions about this from different people?
+5. Nothing in particular.
