@@ -62,7 +62,7 @@ sprintf(buffer,"%s %s %d %d %d %d\n\n%s",my_segment.magic,my_segment.type,my_seg
 return buffer;
 }
 
-int segment_handle(char * buffer, socket_info my_socket, int flag){
+int segment_handle(char * buffer, socket_info my_socket, int flag, FILE * fp){
 	//convert buffer to segment: memory is allocated REMEMBER TO FREE!
 	//printf("HELLO\n");
 	segment * my_segment = buffer_to_segment(buffer);
@@ -95,6 +95,7 @@ int segment_handle(char * buffer, socket_info my_socket, int flag){
 			char * reply = segment_to_buffer(acknowledment_seg);
 			//send acknowledgment				
 			sendto((my_socket.sock_fdesc),(void *)reply,(strlen(reply) + 1),0,(struct sockaddr*)&(my_socket.socket),(sizeof my_socket.socket));
+			fprintf(fp, "%s",my_segment->data);
 			free(acknowledment_seg.data);
 			free(reply);
 		}else{

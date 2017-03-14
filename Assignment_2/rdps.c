@@ -25,10 +25,6 @@ int read_entire_file = 0;
 int server_connect(int socket_udp,struct sockaddr_in socket,socklen_t length);
 int timeout_recvfrom (int sock, char *buf, struct sockaddr_in *connection, socklen_t * length ,int timeoutinseconds);
 int size();
-void enqueue(queue_packet * add_seg);
-queue_packet * dequeue();
-queue_packet * peek();
-void display();
 void slide_window(int seq_num);
 void resend_expired_packets(struct timeval * current,int socket, struct sockaddr_in sd);
 
@@ -155,23 +151,6 @@ int main(int argc, char const *argv[])
 			}			
 		}
 		
-		/*queue_packet * head = peek();
-		struct timeval current_time;
-		int status = gettimeofday(&current_time,NULL);
-		//has packet at head expired? Dequeue, timestamp again, resend enqueue 
-		if(head != NULL && status != -1){
-			double elapsedTime;
-			elapsedTime = (current_time.tv_sec - head->timestamp->tv_sec) * 1000.0;
-	    		elapsedTime += (current_time.tv_usec - head->timestamp->tv_usec) / 1000.0;
-			if(elapsedTime >= PACKET_TIMEOUT){
-				//dequeue
-				queue_packet * packet = dequeue();			
-				gettimeofday(packet->timestamp,NULL);
-				enqueue(packet);
-
-			}				
-		}*/
-
 		//remove expired packets
 		struct timeval current_time;
 		gettimeofday(&current_time,NULL);
@@ -260,58 +239,18 @@ free(packet);
 return 0;
 
 }
-
-
-//http://www.sanfoundry.com/c-program-queue-using-array/
-void enqueue(queue_packet * add_seg){
-
-    if (rear == MAX - 1){
-    printf("Queue Overflow \n");
-    }else{
-        if (front == - 1)
-        /*If queue is initially empty */
-        front = 0;
-	rear = rear + 1;
-        queue_array[rear] = add_seg;
-
-   }
-
-}
  
-queue_packet * dequeue(){
-    if (front == - 1 || front > rear){
-        printf("Queue Underflow \n");
-        return NULL;
-    }else{
-	queue_packet * ret = queue_array[front];
-        front = front + 1;
-	return ret; 
-    }
-}
-
-//For queue 
-/*int size(){
-  return (front - rear) >= 0?(front - rear):0; 
-}*/
-
 int size(){
     int i;
     int count = 0;
     for(i = 0; i < MAX;i++){
-	if(queue_array[i] != NULL){
-	count++;
-	}
+		if(queue_array[i] != NULL){
+		count++;
+		}
     }
-
     return count;
 }
 
-
-queue_packet * peek(){
-    return (front == - 1) ? NULL:queue_array[front];   
-}
-
-//debug purposes 
 void slide_window(int ack_num){
     int i;
     for(i = 0; i < MAX;i++){
@@ -344,5 +283,3 @@ void resend_expired_packets(struct timeval * current,int socket, struct sockaddr
 	}
     }		
 }
-
-

@@ -38,4 +38,4 @@ typedef struct {
 
 segment * buffer_to_segment(char * buffer);
 char * segment_to_buffer(segment my_segment);
-int segment_handle(char * buffer, socket_info my_socket,int flag);
+int segment_handle(char * buffer, socket_info my_socket,int flag, FILE * fp);

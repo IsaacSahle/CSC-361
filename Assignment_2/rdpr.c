@@ -48,6 +48,14 @@ int main(int argc, char const *argv[])
 
 	char buffer[MAX_PACKET_SIZE + 1];
 	ssize_t recieved;
+
+	FILE * fp;
+	fp = fopen(argv[3],"a");
+	if(fp == NULL){
+		fprintf(stderr, "ERROR: NULL FILE POINTER\n");
+		close(socket_udp);	
+		exit(EXIT_FAILURE);
+	}
 	
 	while(1){
 
@@ -66,7 +74,7 @@ int main(int argc, char const *argv[])
 		my_socket.socket = sockd;
 
 		printf("RECIEVED INFO: %s",buffer);
-		segment_handle(buffer,my_socket,RECIEVER);   
+		segment_handle(buffer,my_socket,RECIEVER,fp);   
 	
 	}
 
