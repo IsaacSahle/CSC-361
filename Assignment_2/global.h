@@ -5,9 +5,11 @@
 #define WINDOW_SIZE 10 //segments
 #define SENDER 1
 #define RECIEVER 0
-#define CONNECTION_TIMEOUT 2 //seconds
+#define CONNECTION_TIMEOUT 2 //seconds, for SYN and FIN
 #define MAX 10	//SAME SIZE AS WINDOW!!
-#define PACKET_TIMEOUT 2.0
+#define PACKET_TIMEOUT 500.0
+#define CONNECT 1
+#define TEARDOWN 0
  
 
 int sender_sequence_number;
@@ -28,6 +30,7 @@ typedef struct {
 typedef struct {
 	int sock_fdesc;
 	struct sockaddr_in socket;
+	socklen_t socket_length;
 } socket_info;
 
 typedef struct {

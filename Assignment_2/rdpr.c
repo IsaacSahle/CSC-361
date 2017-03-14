@@ -57,7 +57,8 @@ int main(int argc, char const *argv[])
 		exit(EXIT_FAILURE);
 	}
 	
-	while(1){
+	int finish = 1;
+	while(finish){
 
 		memset(buffer,0,MAX_PACKET_SIZE + 1);
 		recieved = recvfrom(socket_udp,(void*)buffer,sizeof buffer,0, (struct sockaddr*)&sockd,&socket_length);			
@@ -72,13 +73,13 @@ int main(int argc, char const *argv[])
 		socket_info my_socket;
 		my_socket.sock_fdesc = socket_udp;
 		my_socket.socket = sockd;
+		my_socket.socket_length = socket_length;
 
 		printf("RECIEVED INFO: %s",buffer);
-		segment_handle(buffer,my_socket,RECIEVER,fp);   
-	
+		finish = segment_handle(buffer,my_socket,RECIEVER,fp);   
 	}
 
-
+	fclose(fp);
 	close(socket_udp);
 
 

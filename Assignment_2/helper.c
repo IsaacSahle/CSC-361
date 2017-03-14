@@ -17,6 +17,8 @@ segment * buffer_to_segment(char * buffer){
 		return NULL;*/
 	
 	char * token;
+	char copy[MAX_PACKET_SIZE + 1];
+	memset(&copy, 0,MAX_PACKET_SIZE + 1);
 	segment * seg = (segment *) malloc(sizeof(segment));
 	token = strtok(buffer," ");
 	//printf("Token1: %s\n",token);
@@ -26,16 +28,20 @@ segment * buffer_to_segment(char * buffer){
 	strcpy(seg->type,token);
 	token = strtok(NULL," ");
 	//printf("Token3: %s\n",token);
-	seg->sequence_num = (int) strtol(token,(char **)NULL,10);
+	strcpy(copy,token);
+	seg->sequence_num = (int) strtol(copy,(char **)NULL,10);
 	token = strtok(NULL," ");
 	//printf("Token4: %s\n",token);
-	seg->ack_num = (int) strtol(token,(char **)NULL,10);
+	strcpy(copy,token);
+	seg->ack_num = (int) strtol(copy,(char **)NULL,10);
 	token = strtok(NULL," ");
 	//printf("Token5: %s\n",token);
-	seg->payload_len = (int) strtol(token,(char **)NULL,10);
+	strcpy(copy,token);
+	seg->payload_len = (int) strtol(copy,(char **)NULL,10);
 	token = strtok(NULL," ");
 	//printf("Token6: %s\n",token);
-	seg->window = (int) strtol(token,(char **)NULL,10);
+	strcpy(copy,token);
+	seg->window = (int) strtol(copy,(char **)NULL,10);
 	
 	//trim whitespace tokens
 	//printf("TOKEN REMAINS: %s\n",token);
@@ -95,6 +101,7 @@ int segment_handle(char * buffer, socket_info my_socket, int flag, FILE * fp){
 			char * reply = segment_to_buffer(acknowledment_seg);
 			//send acknowledgment				
 			sendto((my_socket.sock_fdesc),(void *)reply,(strlen(reply) + 1),0,(struct sockaddr*)&(my_socket.socket),(sizeof my_socket.socket));
+			fprintf(stdout, "TO FILE: %s",my_segment->data);
 			fprintf(fp, "%s",my_segment->data);
 			free(acknowledment_seg.data);
 			free(reply);
@@ -126,10 +133,92 @@ int segment_handle(char * buffer, socket_info my_socket, int flag, FILE * fp){
 
 	}else if(strcmp(my_segment->type,"FIN") == 0 && flag != SENDER){
 	//FIN:
+	
+		segment acknowledment_seg;
+		strcpy(acknowledment_seg.magic,"CSC361");
+		strcpy(acknowledment_seg.type,"ACK");
+		acknowledment_seg.sequence_num = 0;
+		acknowledment_seg.ack_num = my_segment->sequence_num + 1;
+		acknowledment_seg.payload_len = 0;
+		acknowledment_seg.window = 0; //bytes (MAX_PACKET_SIZE * WINDOW_SIZE)
+		acknowledment_seg.data = (char *) calloc(1,sizeof(char));
+		strcpy(acknowledment_seg.data,"");
+		char * reply = segment_to_buffer(acknowledment_seg);
+		//send acknowledgment	
+		sendto((my_socket.sock_fdesc),(void *)reply,(strlen(reply) + 1),0,(struct sockaddr*)&(my_socket.socket),(sizeof my_socket.socket));
+		//listen for no reply within the timeout time if fin is sent again, resend and if it is not fin sent again, send reset 
+		fd_set socks;
+		struct timeval t;
+		t.tv_sec = CONNECTION_TIMEOUT;
+		t.tv_usec = 0;
+		char buff[MAX_PACKET_SIZE + 1];
+		memset(buff,0,MAX_PACKET_SIZE);
+		ssize_t recieved;
+		while(1){
+			FD_ZERO(&socks);
+			FD_SET(my_socket.sock_fdesc, &socks);
+			select(my_socket.sock_fdesc + 1, &socks, NULL, NULL, &t);
 
+			if (FD_ISSET(my_socket.sock_fdesc, &socks)){
+				recieved = recvfrom(my_socket.sock_fdesc,(void *)buff, MAX_PACKET_SIZE, 0, (struct sockaddr *)&(socket),&my_socket.socket_length);
+				if (recieved < 0) {
+						fprintf(stderr, "recvfrom failed\n");
+						exit(EXIT_FAILURE);
+				}
+				//resend				
+				segment * init = buffer_to_segment(buff);
+				//check for FIN 
+				if(init == NULL){
+					continue;
+				}else if(strcmp(init->type,"FIN") != 0){
+				//NOT A FIN
+				 if(strcmp(init->type,"RST") != 0){
+					//not a ACK and not a RST so wtf is it...send reset flag
+					//create segment
+					segment reset;
+					strcpy(reset.magic,"CSC361");
+					strcpy(reset.type,"RST");
+					reset.sequence_num = 0;
+					reset.ack_num = 0;
+					reset.payload_len = 0;
+					reset.window = 0;
+					reset.data = (char *) calloc(1,sizeof(char));
+					strcpy(reset.data,"");
+
+					char * p = segment_to_buffer(reset);
+					free(reset.data);
+					sendto(my_socket.sock_fdesc,(void *)p,(strlen(p) + 1),0,(struct sockaddr*)&(my_socket.socket),(sizeof my_socket.socket));
+					free(p);
+				 }
+					
+					free(init->data);
+					free(init);
+					free(my_segment->data);
+					free(my_segment);
+					fclose(fp);
+					close(my_socket.sock_fdesc);
+					fprintf(stderr,"ERROR: RESET FLAG SENT DURING CONNECTION TEARDOWN\n");
+					exit(EXIT_FAILURE);
+				}else{
+				//recieved another fin, lets resend ack
+				   	sendto((my_socket.sock_fdesc),(void *)reply,(strlen(reply) + 1),0,(struct sockaddr*)&(my_socket.socket),(sizeof my_socket.socket));
+				}
+
+				free(init->data);
+				free(init);	
+			}else{
+				break;
+			}
+		}
+					
+		free(acknowledment_seg.data);
+		free(reply);
+		free(my_segment->data);
+		free(my_segment);
+		return 0;
 	}else if(strcmp(my_segment->type,"RST") == 0){
-	//RST
-
+	//RST: close everything and exit
+	printf("RECIEVED RESET\n");
 	}
 
 	//Free segment memory

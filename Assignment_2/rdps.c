@@ -22,9 +22,8 @@ int front = - 1;
 int w_size = 0;
 int read_entire_file = 0;
 
-int server_connect(int socket_udp,struct sockaddr_in socket,socklen_t length);
-int timeout_recvfrom (int sock, char *buf, struct sockaddr_in *connection, socklen_t * length ,int timeoutinseconds);
 int size();
+void server_connection(int socket_udp,struct sockaddr_in socket,socklen_t length,int status);
 void slide_window(int seq_num);
 void resend_expired_packets(struct timeval * current,int socket, struct sockaddr_in sd);
 
@@ -74,7 +73,7 @@ int main(int argc, char const *argv[])
 	ssize_t recieved;
 	//keep trying to connect to server
 	sequence_max = MAX_PACKET_SIZE - 1;
-	server_connect(socket_udp,reciever,reciever_socket_length);
+	server_connection(socket_udp,reciever,reciever_socket_length,CONNECT);
 
 	//open file
 	fcntl(socket_udp, F_SETFL, O_NONBLOCK);
@@ -157,31 +156,34 @@ int main(int argc, char const *argv[])
 		resend_expired_packets(&current_time,socket_udp,reciever); 
 	
 	}
-
-
+	
+	fclose(fp);
+	server_connection(socket_udp,reciever,reciever_socket_length,TEARDOWN);
 	close(socket_udp);
-
-
 
 	return 0;
 }
 
 
 
-int server_connect(int socket_udp,struct sockaddr_in socket,socklen_t length){
-//Fire off SYN packet
-
+void server_connection(int socket_udp,struct sockaddr_in socket,socklen_t length,int status){
+//Fire off SYN or FIN packet
 //create segment
 segment synchro;
 char buff[MAX_PACKET_SIZE + 1];
 strcpy(synchro.magic,"CSC361");
-strcpy(synchro.type,"SYN");
 
-srand(time(NULL));   // should only be called once
-synchro.sequence_num = (rand() % 10000) + 10; //NOTE: select random sequence num > 10 (window size)
-//synchro.sequence_num = 100; 
-sender_sequence_number = synchro.sequence_num; //set global sequence
-sequence_base = synchro.sequence_num;
+if(status == CONNECT){
+	strcpy(synchro.type,"SYN");
+	srand(time(NULL));   // should only be called once
+	synchro.sequence_num = (rand() % 10000) + 10; //NOTE: select random sequence num > 10 (window size)
+	sender_sequence_number = synchro.sequence_num; //set global sequence
+	sequence_base = synchro.sequence_num;	
+}else{
+	strcpy(synchro.type,"FIN");
+    synchro.sequence_num = sender_sequence_number;
+}
+
 synchro.ack_num = 0; //irrelevant
 synchro.payload_len = 0;
 synchro.window = 0;
@@ -213,7 +215,7 @@ while(1){
 	      	    exit(EXIT_FAILURE);
 	    }
 	    
-	    printf("REPLY TO SYN: %s\n",buff);
+	    printf("REPLY TO SYN OR FIN: %s\n",buff);
 	    segment * init = buffer_to_segment(buff);
 		//check for corrupt ACK 
 		if(init == NULL){
@@ -223,6 +225,35 @@ while(1){
 			free(init->data);
 			free(init);
 	    	break;
+		}else{
+			
+			 if(strcmp(init->type,"RST") != 0){
+				//not a ACK and not a RST so wtf is it...send reset flag
+				//create segment
+				segment reset;
+				strcpy(reset.magic,"CSC361");
+				strcpy(reset.type,"RST");
+				reset.sequence_num = 0;
+				reset.ack_num = 0;
+				reset.payload_len = 0;
+				reset.window = 0;
+				reset.data = (char *) calloc(1,sizeof(char));
+				strcpy(reset.data,"");
+
+				char * p = segment_to_buffer(reset);
+				free(reset.data);
+				sendto(socket_udp,(void *)p,(strlen(p) + 1),0,(struct sockaddr*)&(socket),(length));
+				free(p);
+			 }
+
+				///close
+				free(init->data);
+				free(init);
+				free(packet);
+				close(socket_udp);
+				char * error;
+				fprintf(stderr,"ERROR: RESET FLAG SENT DURING %s\n",error = (status == CONNECT?"CONNECTION":"TEARDOWN"));
+				exit(EXIT_FAILURE);
 		}
 
 		free(init->data);
@@ -231,13 +262,10 @@ while(1){
 	}
 
 	//resend
-	//sendto(socket_udp,(void *)packet,(strlen(packet) + 1),0,(struct sockaddr*)&(socket),(length));
+	sendto(socket_udp,(void *)packet,(strlen(packet) + 1),0,(struct sockaddr*)&(socket),(length));
 }
 
-
 free(packet);
-return 0;
-
 }
  
 int size(){
@@ -276,7 +304,7 @@ void resend_expired_packets(struct timeval * current,int socket, struct sockaddr
 		elapsedTime += (current->tv_usec - queue_array[i]->timestamp->tv_usec) / 1000.0;
 		if(elapsedTime >= PACKET_TIMEOUT){
 			//resend buffer
-			printf("Resending....\n");			
+			printf("Resending....time: %f\n",elapsedTime);			
 			sendto(socket,(void *)queue_array[i]->buffer,(strlen(queue_array[i]->buffer) + 1),0,(struct sockaddr*)&sd,sizeof sd);				
 			gettimeofday(queue_array[i]->timestamp,NULL);
 		}
