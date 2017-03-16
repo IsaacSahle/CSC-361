@@ -29,7 +29,13 @@ segment * buffer_to_segment(char * buffer){
 	p++;
 	seg->window = (int) strtol(p,&p,10);
 	
-	p += 2;	
+	p += 2;
+	printf("MAGIC:%s\n",seg->magic);	
+	printf("TYPE:%s\n",seg->type);	
+	printf("SEQ:%s\n",seg->sequence_num);	
+	printf("ACK:%s\n",seg->ack_num);	
+	printf("PAY:%s\n",seg->payload_len);	
+	printf("WIN:%s\n",seg->window);	
 	printf("Data: %s\n",p);
 	seg->data = (char *) calloc(seg->payload_len + 1,sizeof(char));
 	//seg->data = (char *) malloc(seg->payload_len + 1);
