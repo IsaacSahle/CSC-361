@@ -19,7 +19,7 @@ segment * buffer_to_segment(char * buffer){
 	segment * seg = (segment *) malloc(sizeof(segment));
 	//printf("Token1: %s\n",token);
 	strncpy(seg->magic,buffer,6);
-	strncpy(seg->type,buffer[8],3);
+	strncpy(seg->type,&buffer[8],3);
 	p = &buffer[13];
 	seg->sequence_num = (int) strtol(p,&p,10);
 	p++;
@@ -30,7 +30,7 @@ segment * buffer_to_segment(char * buffer){
 	seg->window = (int) strtol(p,&p,10);
 	
 	p += 2;	
-	printf("TOKEN REMAINS: %s\n",token);
+	printf("TOKEN REMAINS: %s\n",p);
 	seg->data = (char *) calloc(seg->payload_len + 1,sizeof(char));
 	//seg->data = (char *) malloc(seg->payload_len + 1);
 	if(seg->payload_len == 0){
