@@ -75,7 +75,7 @@ int main(int argc, char const *argv[])
 		my_socket.socket = sockd;
 		my_socket.socket_length = socket_length;
 
-		printf("RECIEVED INFO: %s",buffer);
+		//printf("RECIEVED INFO: %s",buffer);
 		finish = segment_handle(buffer,my_socket,RECIEVER,fp);   
 	}
 

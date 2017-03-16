@@ -34,13 +34,13 @@ segment * buffer_to_segment(char * buffer){
 	seg->window = (int) strtol(p,&p,10);
 	
 	p += 2;
-	printf("MAGIC:%s\n",seg->magic);	
+	/*printf("MAGIC:%s\n",seg->magic);	
 	printf("TYPE:%s\n",seg->type);	
 	printf("SEQ:%d\n",seg->sequence_num);	
 	printf("ACK:%d\n",seg->ack_num);	
 	printf("PAY:%d\n",seg->payload_len);	
 	printf("WIN:%d\n",seg->window);	
-	printf("Data: %s\n",p);
+	printf("Data: %s\n",p);*/
 	seg->data = (char *) calloc(seg->payload_len + 1,sizeof(char));
 	//seg->data = (char *) malloc(seg->payload_len + 1);
 	if(seg->payload_len == 0){
@@ -105,7 +105,7 @@ int segment_handle(char * buffer, socket_info my_socket, int flag, FILE * fp){
 			char * reply = segment_to_buffer(acknowledment_seg);
 			//send acknowledgment				
 			sendto((my_socket.sock_fdesc),(void *)reply,(strlen(reply) + 1),0,(struct sockaddr*)&(my_socket.socket),(sizeof my_socket.socket));
-			fprintf(stdout, "TO FILE: %s",my_segment->data);
+			//fprintf(stdout, "TO FILE: %s",my_segment->data);
 			fprintf(fp, "%s",my_segment->data);
 			free(acknowledment_seg.data);
 			free(reply);

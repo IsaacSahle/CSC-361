@@ -88,13 +88,13 @@ int main(int argc, char const *argv[])
 	
 	while(size() > 0 || !read_entire_file){
 
-		memset(buffer,0,MAX_PACKET_SIZE);
+		memset(buffer,0,MAX_PACKET_SIZE + 1);
 		recieved = recvfrom(socket_udp,(void*)buffer,MAX_PACKET_SIZE,0, (struct sockaddr*)&sender,&sender_socket_length);			
 		//is there data to read? 
 		if(recieved > 0){
 			printf("ACKNOWLEDGMENT....\n");			
 			//recieved data 
-			buffer[MAX_PACKET_SIZE - 1] = '\0';	
+			buffer[MAX_PACKET_SIZE] = '\0';	
 			segment * s = buffer_to_segment(buffer);
 			//go through array (sequence num < ack num)...biggg asumption that the recieved packet is ack!! add a check later			
 			slide_window(s->ack_num); 	
@@ -121,26 +121,29 @@ int main(int argc, char const *argv[])
 				     //read payloadlength bytes from the file
 				      
 				     char file_contents[PAYLOAD_LENGTH + 1];
-			         memset(file_contents,0,PAYLOAD_LENGTH + 1);
+			             memset(file_contents,0,PAYLOAD_LENGTH + 1);
 				     int bytes_read = 0;
-				     
+				     int my_char;
 				      while(bytes_read < PAYLOAD_LENGTH){
+						my_char = fgetc(fp);
 						if(feof(fp))
 						{
 					   	    break;
 						}						
-						file_contents[bytes_read] = fgetc(fp);						
+						file_contents[bytes_read] = my_char; 						
 						bytes_read++;
 				      }
 
 				     read_entire_file = (bytes_read != PAYLOAD_LENGTH)?1:0;
-				     file_contents[bytes_read] = '\0';
+				     //get rid of strag char at end of message
+				     file_contents[bytes_read] = '\0'; 
 				     storage->packet->payload_len = bytes_read;
 				     sender_sequence_number = sender_sequence_number + bytes_read;
 				     strcpy(storage->packet->data,file_contents);
 				     char * packet = segment_to_buffer(*(storage->packet));
 				     gettimeofday(storage->timestamp,NULL);
 				     printf("sending....\n");
+				     
 				     sendto(socket_udp,(void *)packet,(strlen(packet) + 1),0,(struct sockaddr*)&(reciever),sizeof reciever);
 				     strcpy(storage->buffer,packet);
 				     //free packet
@@ -215,7 +218,7 @@ while(1){
 	      	    exit(EXIT_FAILURE);
 	    }
 	    
-	    printf("REPLY TO SYN OR FIN: %s\n",buff);
+	    //printf("REPLY TO SYN OR FIN: %s\n",buff);
 	    segment * init = buffer_to_segment(buff);
 		//check for corrupt ACK 
 		if(init == NULL){
@@ -227,13 +230,6 @@ while(1){
 	    	break;
 		}else{
 				
-			//printf("%s\n",init->magic);
-			//printf("%s\n",init->type);
-			//printf("%d\n",init->sequence_num);
-			//printf("%d\n",init->ack_num);
-			//printf("%d\n",init->payload_len);
-			//printf("%d\n",init->window);
-			//printf("%s\n",init->data);
 			 if(strcmp(init->type,"RST") != 0){
 				//not a ACK and not a RST so wtf is it...send reset flag
 				//create segment
@@ -309,6 +305,8 @@ void resend_expired_packets(struct timeval * current,int socket, struct sockaddr
 		double elapsedTime;
 		elapsedTime = (current->tv_sec - queue_array[i]->timestamp->tv_sec) * 1000.0;
 		elapsedTime += (current->tv_usec - queue_array[i]->timestamp->tv_usec) / 1000.0;
+		//printf("current: %ld.%06ld\n", current->tv_sec,current->tv_usec);
+		//printf("stamp: %ld.%06ld\n",queue_array[i]->timestamp->tv_sec,queue_array[i]->timestamp->tv_usec);		
 		if(elapsedTime >= PACKET_TIMEOUT){
 			//resend buffer
 			printf("Resending....time: %f\n",elapsedTime);			
