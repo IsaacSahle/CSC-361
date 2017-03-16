@@ -30,14 +30,14 @@ segment * buffer_to_segment(char * buffer){
 	seg->window = (int) strtol(p,&p,10);
 	
 	p += 2;	
-	printf("TOKEN REMAINS: %s\n",p);
+	printf("Data: %s\n",p);
 	seg->data = (char *) calloc(seg->payload_len + 1,sizeof(char));
 	//seg->data = (char *) malloc(seg->payload_len + 1);
 	if(seg->payload_len == 0){
 		strcpy(seg->data,"");
 	}else{
-	    printf("DATA: %s",token);
-		strcpy(seg->data,token);	
+	    //printf("DATA: %s",p);
+		strcpy(seg->data,p);	
 	}
 
 	/*char * token;
