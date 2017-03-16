@@ -19,7 +19,7 @@ int sequence_max;
 
 typedef struct {
 	char magic[MAGIC_LENGTH + 1]; //One possible value: CSC361
-	char type[FLAG_LENGTH]; //All flags same size
+	char type[FLAG_LENGTH + 1]; //All flags same size
 	int sequence_num; 
 	int ack_num;
 	int payload_len;

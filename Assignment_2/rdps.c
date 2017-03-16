@@ -226,7 +226,14 @@ while(1){
 			free(init);
 	    	break;
 		}else{
-			
+				
+			//printf("%s\n",init->magic);
+			//printf("%s\n",init->type);
+			//printf("%d\n",init->sequence_num);
+			//printf("%d\n",init->ack_num);
+			//printf("%d\n",init->payload_len);
+			//printf("%d\n",init->window);
+			//printf("%s\n",init->data);
 			 if(strcmp(init->type,"RST") != 0){
 				//not a ACK and not a RST so wtf is it...send reset flag
 				//create segment

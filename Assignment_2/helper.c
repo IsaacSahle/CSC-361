@@ -17,9 +17,13 @@ segment * buffer_to_segment(char * buffer){
 		return NULL;*/	
 	char * p;
 	segment * seg = (segment *) malloc(sizeof(segment));
+	memset(seg->magic,0,MAGIC_LENGTH + 1);
+	memset(seg->type,0,FLAG_LENGTH + 1);
 	//printf("Token1: %s\n",token);
 	strncpy(seg->magic,buffer,6);
+	buffer[6] = '\0';
 	strncpy(seg->type,&buffer[7],3);
+	buffer[10] = '\0';
 	p = &buffer[11];
 	seg->sequence_num = (int) strtol(p,&p,10);
 	p++;
