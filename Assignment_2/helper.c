@@ -14,39 +14,23 @@
 segment * buffer_to_segment(char * buffer){
 	//printf("BUFFER: %s\n",buffer);
 	/*if(strlen(buffer) < MAX_PACKET_SIZE)
-		return NULL;*/
-	
-	char * token;
-	char copy[MAX_PACKET_SIZE + 1];
-	memset(&copy, 0,MAX_PACKET_SIZE + 1);
+		return NULL;*/	
+	char * p;
 	segment * seg = (segment *) malloc(sizeof(segment));
-	token = strtok(buffer," ");
 	//printf("Token1: %s\n",token);
-	strcpy(seg->magic,token);
-	token = strtok(NULL," ");
-	//printf("Token2: %s\n",token);
-	strcpy(seg->type,token);
-	token = strtok(NULL," ");
-	//printf("Token3: %s\n",token);
-	strcpy(copy,token);
-	seg->sequence_num = (int) strtol(copy,(char **)NULL,10);
-	token = strtok(NULL," ");
-	//printf("Token4: %s\n",token);
-	strcpy(copy,token);
-	seg->ack_num = (int) strtol(copy,(char **)NULL,10);
-	token = strtok(NULL," ");
-	//printf("Token5: %s\n",token);
-	strcpy(copy,token);
-	seg->payload_len = (int) strtol(copy,(char **)NULL,10);
-	token = strtok(NULL," ");
-	//printf("Token6: %s\n",token);
-	strcpy(copy,token);
-	seg->window = (int) strtol(copy,(char **)NULL,10);
+	strncpy(seg->magic,buffer,6);
+	strncpy(seg->type,buffer[8],3);
+	p = &buffer[13];
+	seg->sequence_num = (int) strtol(p,&p,10);
+	p++;
+	seg->ack_num = (int) strtol(p,&p,10);
+	p++;
+	seg->payload_len = (int) strtol(p,&p,10);
+	p++;
+	seg->window = (int) strtol(p,&p,10);
 	
-	//trim whitespace tokens
+	p += 2;	
 	printf("TOKEN REMAINS: %s\n",token);
-	//token = strtok(NULL,"");
-	token = token + 3;	
 	seg->data = (char *) calloc(seg->payload_len + 1,sizeof(char));
 	//seg->data = (char *) malloc(seg->payload_len + 1);
 	if(seg->payload_len == 0){
@@ -54,8 +38,16 @@ segment * buffer_to_segment(char * buffer){
 	}else{
 	    printf("DATA: %s",token);
 		strcpy(seg->data,token);	
-	} 
-	   
+	}
+
+	/*char * token;
+	char copy[MAX_PACKET_SIZE + 1];
+	memset(&copy, 0,MAX_PACKET_SIZE + 1);
+	segment * seg = (segment *) malloc(sizeof(segment));
+	strncpy(seg->magic,buffer,6);
+	strncpy(seg->type,buffer[8],3);*/
+
+
 	return seg;
 }
 
