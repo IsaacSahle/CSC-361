@@ -117,11 +117,11 @@ int main(int argc, char const *argv[])
 				     storage->packet->sequence_num = sender_sequence_number;
 				     storage->packet->ack_num = 0;
 				     storage->packet->window = 0;
-				     storage->packet->data = (char *) calloc(PAYLOAD_LENGTH,sizeof(char));
+				     storage->packet->data = (char *) calloc(PAYLOAD_LENGTH + 1,sizeof(char));
 				     //read payloadlength bytes from the file
 				      
 				     char file_contents[PAYLOAD_LENGTH + 1];
-			             memset(file_contents,0,PAYLOAD_LENGTH + 1);
+			         memset(file_contents,0,PAYLOAD_LENGTH + 1);
 				     int bytes_read = 0;
 				     
 				      while(bytes_read < PAYLOAD_LENGTH){
