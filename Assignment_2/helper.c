@@ -49,11 +49,13 @@ segment * buffer_to_segment(char * buffer){
 	token = token + 3;	
 	seg->data = (char *) calloc(seg->payload_len + 1,sizeof(char));
 	//seg->data = (char *) malloc(seg->payload_len + 1);
-	if(seg->payload_len == 0)	
-	   strcpy(seg->data,"");
-	else 
-	   strcpy(seg->data,token);
-	
+	if(seg->payload_len == 0){
+		strcpy(seg->data,"");
+	}else{
+	    printf("DATA: %s",token);
+		strcpy(seg->data,token);	
+	} 
+	   
 	return seg;
 }
 
