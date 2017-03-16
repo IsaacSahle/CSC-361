@@ -44,7 +44,7 @@ segment * buffer_to_segment(char * buffer){
 	seg->window = (int) strtol(copy,(char **)NULL,10);
 	
 	//trim whitespace tokens
-	//printf("TOKEN REMAINS: %s\n",token);
+	printf("TOKEN REMAINS: %s\n",token);
 	//token = strtok(NULL,"");
 	token = token + 3;	
 	seg->data = (char *) calloc(seg->payload_len + 1,sizeof(char));
