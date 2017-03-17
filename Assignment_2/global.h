@@ -5,7 +5,7 @@
 #define WINDOW_SIZE 10 //segments
 #define SENDER 1
 #define RECIEVER 0
-#define CONNECTION_TIMEOUT 2 //seconds, for SYN and FIN
+#define CONNECTION_TIMEOUT 1 //seconds, for SYN and FIN
 #define MAX 10	//SAME SIZE AS WINDOW!!
 #define PACKET_TIMEOUT 500.0
 #define CONNECT 1
@@ -17,7 +17,7 @@ int request_number;
 int sequence_base;
 int sequence_max;
 
-typedef struct {
+typedef struct{
 	char magic[MAGIC_LENGTH + 1]; //One possible value: CSC361
 	char type[FLAG_LENGTH + 1]; //All flags same size
 	int sequence_num; 
