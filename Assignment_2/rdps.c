@@ -79,7 +79,7 @@ int main(int argc, char const *argv[])
 	fcntl(socket_udp, F_SETFL, O_NONBLOCK);
 
 	FILE * fp;
-	fp = fopen(argv[5],"r");
+	fp = fopen(argv[5],"rb");
 	if(fp == NULL){
 		fprintf(stderr, "ERROR: CANNOT OPEN FILE\n");
 		close(socket_udp);	
@@ -97,7 +97,9 @@ int main(int argc, char const *argv[])
 			buffer[MAX_PACKET_SIZE] = '\0';	
 			segment * s = buffer_to_segment(buffer);
 			//go through array (sequence num < ack num)...biggg asumption that the recieved packet is ack!! add a check later			
-			slide_window(s->ack_num); 	
+			slide_window(s->ack_num);
+			free(s->data);
+			free(s);
 		}
 		
 		int w_size = size();
@@ -123,7 +125,7 @@ int main(int argc, char const *argv[])
 				     char file_contents[PAYLOAD_LENGTH + 1];
 			             memset(file_contents,0,PAYLOAD_LENGTH + 1);
 				     int bytes_read = 0;
-				     int my_char;
+				     unsigned char my_char;
 				      while(bytes_read < PAYLOAD_LENGTH){
 						my_char = fgetc(fp);
 						if(feof(fp))

@@ -34,13 +34,13 @@ segment * buffer_to_segment(char * buffer){
 	seg->window = (int) strtol(p,&p,10);
 	
 	p += 2;
-	/*printf("MAGIC:%s\n",seg->magic);	
-	printf("TYPE:%s\n",seg->type);	
-	printf("SEQ:%d\n",seg->sequence_num);	
-	printf("ACK:%d\n",seg->ack_num);	
-	printf("PAY:%d\n",seg->payload_len);	
-	printf("WIN:%d\n",seg->window);	
-	printf("Data: %s\n",p);*/
+	//printf("MAGIC:%s\n",seg->magic);	
+	//printf("TYPE:%s\n",seg->type);	
+	//printf("SEQ:%d\n",seg->sequence_num);	
+	//printf("ACK:%d\n",seg->ack_num);	
+	//printf("PAY:%d\n",seg->payload_len);	
+	//printf("WIN:%d\n",seg->window);	
+	//printf("BUFFER TO SEG DATA: %s\n",p);
 	seg->data = (char *) calloc(seg->payload_len + 1,sizeof(char));
 	//seg->data = (char *) malloc(seg->payload_len + 1);
 	if(seg->payload_len == 0){
@@ -50,6 +50,7 @@ segment * buffer_to_segment(char * buffer){
 		strcpy(seg->data,p);	
 	}
 
+	//printf("BUFFER TO SEG DATA AFTER: %s\n",seg->data);
 	/*char * token;
 	char copy[MAX_PACKET_SIZE + 1];
 	memset(&copy, 0,MAX_PACKET_SIZE + 1);
@@ -66,8 +67,9 @@ char * segment_to_buffer(segment my_segment){
 //check to see if packet is valid
 char * buffer = (char *) malloc(MAX_PACKET_SIZE + 1);
 memset(buffer,0,MAX_PACKET_SIZE + 1);
-
+//printf("SEG TO BUFF DATA: %s\n",my_segment.data);
 sprintf(buffer,"%s %s %d %d %d %d\n\n%s",my_segment.magic,my_segment.type,my_segment.sequence_num,my_segment.ack_num,my_segment.payload_len,my_segment.window,my_segment.data);
+//printf("AFTER SEG TO BUFF: %s\n",buffer);
 
 return buffer;
 }
@@ -105,8 +107,11 @@ int segment_handle(char * buffer, socket_info my_socket, int flag, FILE * fp){
 			char * reply = segment_to_buffer(acknowledment_seg);
 			//send acknowledgment				
 			sendto((my_socket.sock_fdesc),(void *)reply,(strlen(reply) + 1),0,(struct sockaddr*)&(my_socket.socket),(sizeof my_socket.socket));
-			//fprintf(stdout, "TO FILE: %s",my_segment->data);
-			fprintf(fp, "%s",my_segment->data);
+			//fprintf(stdout, "TO FILE: %d\n",(int)strlen(my_segment->data));
+			//fprintf(fp, "%s",my_segment->data);
+			//fprintf(stdout,"%d\n",my_segment->payload_len);
+			fwrite(my_segment->data,sizeof(char),my_segment->payload_len,fp);
+			//fwrite(my_segment->data,sizeof(char),(int)strlen(my_segment->data),fp);			
 			free(acknowledment_seg.data);
 			free(reply);
 		}else{

@@ -50,7 +50,7 @@ int main(int argc, char const *argv[])
 	ssize_t recieved;
 
 	FILE * fp;
-	fp = fopen(argv[3],"a");
+	fp = fopen(argv[3],"ab");
 	if(fp == NULL){
 		fprintf(stderr, "ERROR: NULL FILE POINTER\n");
 		close(socket_udp);	
