@@ -8,6 +8,9 @@
 #include <unistd.h>
 #include <ctype.h>
 #include <sys/stat.h>
+#include <sys/time.h>
+#include <time.h>
+
 
 #include "global.h"
 
@@ -60,14 +63,15 @@ int segment_handle(char * buffer, socket_info my_socket, int flag, FILE * fp){
 	}else if(strcmp(my_segment->type,"DAT") == 0 && flag != SENDER){
 	//DAT
 		//printf("Sending ACK: Sequence..%d Request..%d\n",my_segment->sequence_num,request_number);
-		
+		log_segment('r',&my_socket.socket,&my_socket.socket,my_segment);
+		printf("SEQ REQ %d %d\n",my_segment->sequence_num,request_number);
 		if(my_segment->sequence_num + 1 == request_number){
 			
 			segment acknowledment_seg;
 			strcpy(acknowledment_seg.magic,"CSC361");
 			strcpy(acknowledment_seg.type,"ACK");
 			acknowledment_seg.sequence_num = 0;
-
+			//printf("length: %d\n", my_segment->payload_len);
 			request_number = request_number + my_segment->payload_len; 
 			acknowledment_seg.ack_num =request_number;	
 
@@ -82,7 +86,8 @@ int segment_handle(char * buffer, socket_info my_socket, int flag, FILE * fp){
 			free(acknowledment_seg.data);
 			free(reply);
 		}else{
-			//duplicate or out of order segment 
+			//duplicate or out of order segment
+			printf("WE FOUND RESEND ERROR\n"); 
 		}
 
 	}else if(strcmp(my_segment->type,"ACK") == 0 && flag != RECIEVER){
@@ -124,7 +129,7 @@ int segment_handle(char * buffer, socket_info my_socket, int flag, FILE * fp){
 		//listen for no reply within the timeout time if fin is sent again, resend and if it is not fin sent again, send reset 
 		fd_set socks;
 		struct timeval t;
-		t.tv_sec = CONNECTION_TIMEOUT;
+		t.tv_sec = TIME_WAIT;
 		t.tv_usec = 0;
 		char buff[MAX_PACKET_SIZE + 1];
 		memset(buff,0,MAX_PACKET_SIZE);
@@ -200,4 +205,20 @@ int segment_handle(char * buffer, socket_info my_socket, int flag, FILE * fp){
 	free(my_segment->data);
 	free(my_segment);
 	return 1;
+}
+
+void log_segment(char event, struct sockaddr_in * sender, struct sockaddr_in * reciever, segment * packet){
+
+//print log message to screen
+struct timeval tv;
+time_t nowtime;
+struct tm *nowtm;
+char tmbuf[100];
+gettimeofday(&tv, NULL);
+nowtime = tv.tv_sec;
+nowtm = localtime(&nowtime);
+strftime(tmbuf, 100,"%H:%M:%S", nowtm);
+//snprintf(buf, sizeof buf, "%s.%06ld", tmbuf, tv.tv_usec);
+fprintf(stdout, "%s.%06li %c %s:%d %s:%d %s",tmbuf,(long int)tv.tv_usec,event,inet_ntoa(sender->sin_addr),sender->sin_port,inet_ntoa(reciever->sin_addr),reciever->sin_port,packet->type);
+strcmp(packet->type,"ACK") == 0?fprintf(stdout, " %d %d\n", packet->ack_num,packet->window):fprintf(stdout, " %d %d\n",packet->sequence_num,packet->window);
 }

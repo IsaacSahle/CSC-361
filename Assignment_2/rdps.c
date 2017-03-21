@@ -18,10 +18,12 @@ queue_packet * queue_array[WINDOW_SIZE];
 //int w_size = 0;
 int read_entire_file = 0;
 
+void sync();
 int size();
 void server_connection(int socket_udp,struct sockaddr_in socket,socklen_t length,int status);
 void slide_window(int seq_num);
 void resend_expired_packets(struct timeval * current,int socket, struct sockaddr_in sd);
+
 
 int main(int argc, char const *argv[])
 {
@@ -89,11 +91,12 @@ int main(int argc, char const *argv[])
 		recieved = recvfrom(socket_udp,(void*)buffer,MAX_PACKET_SIZE,0, (struct sockaddr*)&sender,&sender_socket_length);			
 		//is there data to read? 
 		if(recieved > 0){
-			printf("ACKNOWLEDGMENT....\n");			
+			printf("ACKNOWLEDGMENT....");			
 			//recieved data 
 			buffer[MAX_PACKET_SIZE] = '\0';	
 			segment * s = buffer_to_segment(buffer);
 			//go through array (sequence num < ack num)...biggg asumption that the recieved packet is ack!! add a check later			
+			printf("%d\n",s->ack_num);
 			slide_window(s->ack_num);
 			free(s->data);
 			free(s);
@@ -102,7 +105,7 @@ int main(int argc, char const *argv[])
 		int w_size = size();
 		//is the window size full? If not fire up packet, timestamp and toss in array
 		//w_size < WINDOW_SIZE		
-		if(w_size < WINDOW_SIZE && !read_entire_file){ 			
+		if(w_size < 5 && !read_entire_file){ 			
 			//fill window!
 			int i;
 			for(i = 0; i < WINDOW_SIZE;i++){
@@ -141,8 +144,8 @@ int main(int argc, char const *argv[])
 				     strcpy(storage->packet->data,file_contents);
 				     char * packet = segment_to_buffer(*(storage->packet));
 				     gettimeofday(storage->timestamp,NULL);
-				     printf("sending....\n");
-				     
+				     printf("bytes read....%d\n",bytes_read);
+				     log_segment('s',&sender,&reciever,storage->packet);
 				     sendto(socket_udp,(void *)packet,(strlen(packet) + 1),0,(struct sockaddr*)&(reciever),sizeof reciever);
 				     strcpy(storage->buffer,packet);
 				     //free packet
@@ -155,6 +158,7 @@ int main(int argc, char const *argv[])
 		//remove expired packets
 		struct timeval current_time;
 		gettimeofday(&current_time,NULL);
+		//sync();
 		resend_expired_packets(&current_time,socket_udp,reciever); 
 	
 	}
@@ -285,10 +289,11 @@ void slide_window(int ack_num){
     int i;
     for(i = 0; i < WINDOW_SIZE;i++){
 
-	//if(queue_array[i] != NULL)	
-	//printf("ACK: %d SEQ: %d\n",ack_num,queue_array[i]->packet->sequence_num);
+	if(queue_array[i] != NULL){
 
-	if(queue_array[i] != NULL && queue_array[i]->packet->sequence_num < ack_num){
+	printf("ACK: %d SEQ: %d\n",ack_num,queue_array[i]->packet->sequence_num);
+	
+		if((queue_array[i]->packet->sequence_num < ack_num - 1) || queue_array[i]->packet->sequence_num < request_number){
 		//remove from array!!
 		free(queue_array[i]->packet->data);
 		free(queue_array[i]->packet);
@@ -296,8 +301,11 @@ void slide_window(int ack_num){
 		free(queue_array[i]);
 		queue_array[i] = NULL;
 		//w_size++;		
-	}
-    }
+		}
+   	 }
+
+	}	
+
 }
 
 //http://stackoverflow.com/questions/2150291/how-do-i-measure-a-time-interval-in-c
@@ -311,7 +319,7 @@ void resend_expired_packets(struct timeval * current,int socket, struct sockaddr
 		elapsedTime += (current->tv_usec - queue_array[i]->timestamp->tv_usec) / 1000.0;
 		if(elapsedTime >= PACKET_TIMEOUT){
 			//resend buffer
-			printf("Resending....time: %f %d\n",elapsedTime,i);			
+			printf("Resending....time: %f %d %d\n",elapsedTime,i,queue_array[i]->packet->sequence_num);			
 			sendto(socket,(void *)queue_array[i]->buffer,(strlen(queue_array[i]->buffer) + 1),0,(struct sockaddr*)&sd,sizeof sd);				
 			//printf("RESEND VAL: %d\n",x);
 			//printf("%s\n",queue_array[i]->buffer);			
@@ -320,3 +328,28 @@ void resend_expired_packets(struct timeval * current,int socket, struct sockaddr
 	}
     }		
 }
+
+//useless fucking function
+void sync(){
+    int i;
+    for(i = 0; i < WINDOW_SIZE;i++){
+
+	if(queue_array[i] != NULL){
+
+	printf("REQ: %d SEQ: %d\n",request_number,queue_array[i]->packet->sequence_num);
+	
+		if(queue_array[i]->packet->sequence_num < request_number){
+		//remove from array!!
+		free(queue_array[i]->packet->data);
+		free(queue_array[i]->packet);
+		free(queue_array[i]->timestamp);
+		free(queue_array[i]);
+		queue_array[i] = NULL;
+		//w_size++;		
+		}
+   	 }
+
+}	
+
+}
+

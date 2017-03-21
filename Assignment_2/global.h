@@ -9,7 +9,7 @@
 #define PACKET_TIMEOUT 500.0
 #define CONNECT 1
 #define TEARDOWN 0
- 
+#define TIME_WAIT 2 //needs to be greater than connection time out 
 
 int sender_sequence_number;
 int request_number;
@@ -54,3 +54,4 @@ typedef struct{
 segment * buffer_to_segment(char * buffer);
 char * segment_to_buffer(segment my_segment);
 int segment_handle(char * buffer, socket_info my_socket,int flag, FILE * fp);
+void log_segment(char event, struct sockaddr_in * sender, struct sockaddr_in * reciever, segment * packet);
