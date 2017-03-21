@@ -14,12 +14,8 @@
 
 #include "global.h"
 
-
-//queue data_structure
-queue_packet * queue_array[MAX];
-int rear = - 1;
-int front = - 1;
-int w_size = 0;
+queue_packet * queue_array[WINDOW_SIZE];
+//int w_size = 0;
 int read_entire_file = 0;
 
 int size();
@@ -75,9 +71,10 @@ int main(int argc, char const *argv[])
 	sequence_max = MAX_PACKET_SIZE - 1;
 	server_connection(socket_udp,reciever,reciever_socket_length,CONNECT);
 
-	//open file
-	fcntl(socket_udp, F_SETFL, O_NONBLOCK);
 
+	fcntl(socket_udp, F_SETFL, O_NONBLOCK);
+	
+	//open file
 	FILE * fp;
 	fp = fopen(argv[5],"rb");
 	if(fp == NULL){
@@ -103,12 +100,12 @@ int main(int argc, char const *argv[])
 		}
 		
 		int w_size = size();
-		//printf("w_size: %d\n",w_size);
 		//is the window size full? If not fire up packet, timestamp and toss in array
-		if(w_size < WINDOW_SIZE && !read_entire_file){ //Queue is less than window size 			
+		//w_size < WINDOW_SIZE		
+		if(w_size < WINDOW_SIZE && !read_entire_file){ 			
 			//fill window!
 			int i;
-			for(i = 0; i < MAX;i++){
+			for(i = 0; i < WINDOW_SIZE;i++){
 				if(queue_array[i] == NULL && !read_entire_file){
 				     queue_packet * storage  = calloc(1,sizeof(queue_packet)); 
 				     //build segment
@@ -276,7 +273,7 @@ free(packet);
 int size(){
     int i;
     int count = 0;
-    for(i = 0; i < MAX;i++){
+    for(i = 0; i < WINDOW_SIZE;i++){
 		if(queue_array[i] != NULL){
 		count++;
 		}
@@ -286,7 +283,11 @@ int size(){
 
 void slide_window(int ack_num){
     int i;
-    for(i = 0; i < MAX;i++){
+    for(i = 0; i < WINDOW_SIZE;i++){
+
+	//if(queue_array[i] != NULL)	
+	//printf("ACK: %d SEQ: %d\n",ack_num,queue_array[i]->packet->sequence_num);
+
 	if(queue_array[i] != NULL && queue_array[i]->packet->sequence_num < ack_num){
 		//remove from array!!
 		free(queue_array[i]->packet->data);
@@ -294,25 +295,26 @@ void slide_window(int ack_num){
 		free(queue_array[i]->timestamp);
 		free(queue_array[i]);
 		queue_array[i] = NULL;
-		w_size++;		
+		//w_size++;		
 	}
     }
 }
 
+//http://stackoverflow.com/questions/2150291/how-do-i-measure-a-time-interval-in-c
 void resend_expired_packets(struct timeval * current,int socket, struct sockaddr_in sd){
     int i;
-    for(i = 0; i < MAX;i++){
+    for(i = 0; i < WINDOW_SIZE;i++){
 	if(queue_array[i] != NULL){
 		//compute time diff
 		double elapsedTime;
 		elapsedTime = (current->tv_sec - queue_array[i]->timestamp->tv_sec) * 1000.0;
 		elapsedTime += (current->tv_usec - queue_array[i]->timestamp->tv_usec) / 1000.0;
-		//printf("current: %ld.%06ld\n", current->tv_sec,current->tv_usec);
-		//printf("stamp: %ld.%06ld\n",queue_array[i]->timestamp->tv_sec,queue_array[i]->timestamp->tv_usec);		
 		if(elapsedTime >= PACKET_TIMEOUT){
 			//resend buffer
-			printf("Resending....time: %f\n",elapsedTime);			
+			printf("Resending....time: %f %d\n",elapsedTime,i);			
 			sendto(socket,(void *)queue_array[i]->buffer,(strlen(queue_array[i]->buffer) + 1),0,(struct sockaddr*)&sd,sizeof sd);				
+			//printf("RESEND VAL: %d\n",x);
+			//printf("%s\n",queue_array[i]->buffer);			
 			gettimeofday(queue_array[i]->timestamp,NULL);
 		}
 	}

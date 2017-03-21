@@ -11,7 +11,6 @@
 
 #include "global.h"
 
-
 int main(int argc, char const *argv[])
 {
 	if(argc != 4){
@@ -69,20 +68,17 @@ int main(int argc, char const *argv[])
 	    }
 	    
 	    buffer[MAX_PACKET_SIZE] = '\0';	
-		//handle incoming request
-		socket_info my_socket;
-		my_socket.sock_fdesc = socket_udp;
-		my_socket.socket = sockd;
-		my_socket.socket_length = socket_length;
+	    //handle incoming request
+	    socket_info my_socket;
+	    my_socket.sock_fdesc = socket_udp;
+	    my_socket.socket = sockd;
+	    my_socket.socket_length = socket_length;
 
-		//printf("RECIEVED INFO: %s",buffer);
-		finish = segment_handle(buffer,my_socket,RECIEVER,fp);   
+	    finish = segment_handle(buffer,my_socket,RECIEVER,fp);   
 	}
 
 	fclose(fp);
 	close(socket_udp);
-
-
 
 	return 0;
 }

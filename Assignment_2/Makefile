@@ -7,7 +7,7 @@ clean:
 	rm -f rdps rdpr received.dat received.txt
 
 recieve:
-	./rdpr 10.10.1.100 8080 received.dat
+	./rdpr 10.10.1.100 8001 received.txt
 
 send:
-	./rdps 192.168.1.100 8080 10.10.1.100 8080 tdpack5.bin
+	./rdps 192.168.1.100 8001 10.10.1.100 8001 file.txt

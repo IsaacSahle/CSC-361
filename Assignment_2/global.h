@@ -6,7 +6,6 @@
 #define SENDER 1
 #define RECIEVER 0
 #define CONNECTION_TIMEOUT 1 //seconds, for SYN and FIN
-#define MAX 10	//SAME SIZE AS WINDOW!!
 #define PACKET_TIMEOUT 500.0
 #define CONNECT 1
 #define TEARDOWN 0
@@ -38,6 +37,19 @@ typedef struct {
 	struct timeval * timestamp;
 	char buffer[MAX_PACKET_SIZE + 1];
 } queue_packet;
+
+typedef struct{
+	int sender_bytes;
+	int reciever_bytes;
+	int SYN_sent;	
+	int SYN_recieved;
+	int FIN_sent;
+	int FIN_recieved;
+	int RST_sent;
+	int RST_recieved;
+	int ACK_sent;
+	int ACK_recieved;
+}log_info;
 
 segment * buffer_to_segment(char * buffer);
 char * segment_to_buffer(segment my_segment);
