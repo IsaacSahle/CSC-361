@@ -5,11 +5,11 @@
 #define WINDOW_SIZE 10 //segments
 #define SENDER 1
 #define RECIEVER 0
-#define CONNECTION_TIMEOUT 1 //seconds, for SYN and FIN
-#define PACKET_TIMEOUT 500.0
+#define CONNECTION_TIMEOUT 30000 //microseconds, for SYN and FIN
+#define PACKET_TIMEOUT 30.0
 #define CONNECT 1
 #define TEARDOWN 0
-#define TIME_WAIT 2 //needs to be greater than connection time out 
+#define TIME_WAIT 50000 //needs to be greater than connection time out microsecon 
 
 int sender_sequence_number;
 int request_number;

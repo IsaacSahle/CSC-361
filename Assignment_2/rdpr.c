@@ -65,7 +65,7 @@ int main(int argc, char const *argv[])
 		if (recieved < 0) {
 	      	    fprintf(stderr, "recvfrom failed\n");
 	      	    exit(EXIT_FAILURE);
-	    }
+	    	}
 	    
 	    buffer[MAX_PACKET_SIZE] = '\0';	
 	    //handle incoming request
