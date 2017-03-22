@@ -18,7 +18,6 @@ queue_packet * queue_array[WINDOW_SIZE];
 //int w_size = 0;
 int read_entire_file = 0;
 
-void sync();
 int size();
 void server_connection(int socket_udp,struct sockaddr_in socket,socklen_t length,int status,struct sockaddr_in * sender);
 void slide_window(int seq_num);

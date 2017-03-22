@@ -63,7 +63,7 @@ int main(int argc, char const *argv[])
 		recieved = recvfrom(socket_udp,(void*)buffer,sizeof buffer,0, (struct sockaddr*)&sockd,&socket_length);			
 
 		if (recieved < 0) {
-	      	    fprintf(stderr, "recvfrom failed\n");
+	      	    fprintf(stderr, "recvfrom failed in the reciever\n");
 	      	    exit(EXIT_FAILURE);
 	    	}
 	    

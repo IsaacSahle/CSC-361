@@ -9,7 +9,7 @@
 #define PACKET_TIMEOUT 30.0
 #define CONNECT 1
 #define TEARDOWN 0
-#define TIME_WAIT 50000 //needs to be greater than connection time out microsecon 
+#define TIME_WAIT 1 //needs to be greater than connection time out microsecon 
 
 int sender_sequence_number;
 int request_number;

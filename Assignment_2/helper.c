@@ -136,8 +136,8 @@ int segment_handle(char * buffer, socket_info my_socket, int flag, FILE * fp){
 		//listen for no reply within the timeout time if fin is sent again, resend and if it is not fin sent again, send reset 
 		fd_set socks;
 		struct timeval t;
-		t.tv_sec = 0;
-		t.tv_usec = TIME_WAIT;
+		t.tv_sec = TIME_WAIT;
+		t.tv_usec = 0;
 		char buff[MAX_PACKET_SIZE + 1];
 		memset(buff,0,MAX_PACKET_SIZE);
 		ssize_t recieved;
@@ -147,9 +147,9 @@ int segment_handle(char * buffer, socket_info my_socket, int flag, FILE * fp){
 			select(my_socket.sock_fdesc + 1, &socks, NULL, NULL, &t);
 
 			if (FD_ISSET(my_socket.sock_fdesc, &socks)){
-				recieved = recvfrom(my_socket.sock_fdesc,(void *)buff, MAX_PACKET_SIZE, 0, (struct sockaddr *)&(socket),&my_socket.socket_length);
+				recieved = recvfrom(my_socket.sock_fdesc,(void *)buff, MAX_PACKET_SIZE, 0, (struct sockaddr *)&(my_socket.socket),&my_socket.socket_length);
 				if (recieved < 0) {
-						fprintf(stderr, "recvfrom failed\n");
+						fprintf(stderr, "recvfrom failed while in the helper\n");
 						exit(EXIT_FAILURE);
 				}
 				//resend				
