@@ -2,14 +2,14 @@
 #define PAYLOAD_LENGTH 980 //bytes
 #define FLAG_LENGTH 3
 #define MAGIC_LENGTH 6
-#define WINDOW_SIZE 10 //segments
+#define WINDOW_SIZE 20 //segments
 #define SENDER 1
 #define RECIEVER 0
-#define CONNECTION_TIMEOUT 30000 //microseconds, for SYN and FIN
+#define CONNECTION_TIMEOUT 10000 //microseconds, for SYN and FIN 30000
 #define PACKET_TIMEOUT 30.0
 #define CONNECT 1
 #define TEARDOWN 0
-#define TIME_WAIT 1 //needs to be greater than connection time out microsecon 
+#define TIME_WAIT 50000 //needs to be greater than connection time out microseconds  
 
 int sender_sequence_number;
 int request_number;
@@ -39,19 +39,18 @@ typedef struct {
 } queue_packet;
 
 typedef struct{
-	int sender_bytes;
-	int reciever_bytes;
-	int SYN_sent;	
-	int SYN_recieved;
-	int FIN_sent;
-	int FIN_recieved;
+	int total_bytes;
+	int unique_bytes;
+	int total_packets;
+	int unique_packets;
+	int SYN;	
+	int FIN;
 	int RST_sent;
-	int RST_recieved;
-	int ACK_sent;
-	int ACK_recieved;
+	int RST_received;
+	int ACK;
 }log_info;
 
 segment * buffer_to_segment(char * buffer);
 char * segment_to_buffer(segment my_segment);
-int segment_handle(char * buffer, socket_info my_socket,int flag, FILE * fp);
+int segment_handle(char * buffer, socket_info my_socket,int flag, FILE * fp,log_info * rec);
 void log_segment(char event, struct sockaddr_in * sender, struct sockaddr_in * reciever, segment * packet);

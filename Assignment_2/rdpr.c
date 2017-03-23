@@ -8,8 +8,13 @@
 #include <unistd.h>
 #include <ctype.h>
 #include <sys/stat.h>
+#include <sys/time.h>
+#include <time.h>
 
 #include "global.h"
+log_info receiver_log;
+
+
 
 int main(int argc, char const *argv[])
 {
@@ -57,6 +62,10 @@ int main(int argc, char const *argv[])
 	}
 	
 	int finish = 1;
+	//set global log stats to all zeros
+	memset(&receiver_log,0,sizeof(receiver_log));
+	struct timeval start;
+	gettimeofday(&start,NULL);	
 	while(finish){
 
 		memset(buffer,0,MAX_PACKET_SIZE + 1);
@@ -74,11 +83,26 @@ int main(int argc, char const *argv[])
 	    my_socket.socket = sockd;
 	    my_socket.socket_length = socket_length;
 
-	    finish = segment_handle(buffer,my_socket,RECIEVER,fp);   
+	    finish = segment_handle(buffer,my_socket,RECIEVER,fp,&receiver_log);   
 	}
+
+	struct timeval end;
+	gettimeofday(&end,NULL);	
+	double elapsedTime;
+	elapsedTime = (end.tv_sec - start.tv_sec) * 1000.0;
+	elapsedTime += (end.tv_usec - start.tv_usec)/ 1000.0;
 
 	fclose(fp);
 	close(socket_udp);
-
+	fprintf(stdout,"total data bytes received: %d\n",receiver_log.total_bytes);
+	fprintf(stdout,"unique data bytes received: %d\n",receiver_log.unique_bytes);
+	fprintf(stdout,"total data packets received: %d\n",receiver_log.total_packets);
+	fprintf(stdout,"unique data packets received: %d\n",receiver_log.unique_packets);
+	fprintf(stdout,"SYN packets received: %d\n",receiver_log.SYN);
+	fprintf(stdout,"FIN packets received: %d\n",receiver_log.FIN);
+	fprintf(stdout,"RST packets received: %d\n",receiver_log.RST_sent);
+	fprintf(stdout,"ACK packets sent: %d\n",receiver_log.ACK);
+	fprintf(stdout,"RST packets sent: %d\n",receiver_log.RST_received);
+	fprintf(stdout,"total time duration (second): %.3f\n",elapsedTime/1000);
 	return 0;
 }

@@ -54,7 +54,7 @@ sprintf(buffer,"%s %s %d %d %d %d\n\n%s",my_segment.magic,my_segment.type,my_seg
 return buffer;
 }
 
-int segment_handle(char * buffer, socket_info my_socket, int flag, FILE * fp){
+int segment_handle(char * buffer, socket_info my_socket, int flag, FILE * fp,log_info * rec){
 	//convert buffer to segment: memory is allocated REMEMBER TO FREE!
 	segment * my_segment = buffer_to_segment(buffer);
 
@@ -76,12 +76,17 @@ int segment_handle(char * buffer, socket_info my_socket, int flag, FILE * fp){
 			request_number = request_number + my_segment->payload_len; 
 			acknowledment_seg.ack_num =request_number;	
 			fwrite(my_segment->data,sizeof(char),my_segment->payload_len,fp);
+			rec->total_bytes += my_segment->payload_len;
+			rec->unique_bytes += my_segment->payload_len;
+			rec->total_packets += 1;
+			rec->unique_packets += 1;
 		}else{
 			//duplicate or out of order segment
 			log_segment('R',&my_socket.socket,&my_socket.socket,my_segment);
 			acknowledment_seg.ack_num =request_number;	
 			resend_ack = 1;			
-			//printf("WE FOUND RESEND ERROR\n"); 
+			rec->total_bytes += my_segment->payload_len;
+			rec->total_packets += 1; 
 		}
 		acknowledment_seg.payload_len = 0;
 		acknowledment_seg.window = 0; //bytes
@@ -91,6 +96,7 @@ int segment_handle(char * buffer, socket_info my_socket, int flag, FILE * fp){
 		//send acknowledgment
 		(resend_ack == 0)?log_segment('s',&my_socket.socket,&my_socket.socket,&acknowledment_seg):log_segment('S',&my_socket.socket,&my_socket.socket,&acknowledment_seg);				
 		sendto((my_socket.sock_fdesc),(void *)reply,(strlen(reply) + 1),0,(struct sockaddr*)&(my_socket.socket),(sizeof my_socket.socket));
+		rec->ACK += 1;					
 		free(acknowledment_seg.data);
 		free(reply);
 
@@ -113,12 +119,14 @@ int segment_handle(char * buffer, socket_info my_socket, int flag, FILE * fp){
 					(SYN_received == 0)?log_segment('r',&my_socket.socket,&my_socket.socket,my_segment):log_segment('R',&my_socket.socket,&my_socket.socket,my_segment);		
 		//send acknowledgment	
 		sendto((my_socket.sock_fdesc),(void *)reply,(strlen(reply) + 1),0,(struct sockaddr*)&(my_socket.socket),(sizeof my_socket.socket));
+		rec->ACK += 1;
+		rec->SYN += 1;			
 		free(acknowledment_seg.data);
 		free(reply);
 		SYN_received = 1;
 	}else if(strcmp(my_segment->type,"FIN") == 0 && flag != SENDER){
 	//FIN:
-	
+		rec->FIN += 1;	
 		segment acknowledment_seg;
 		strcpy(acknowledment_seg.magic,"CSC361");
 		strcpy(acknowledment_seg.type,"ACK");
@@ -136,8 +144,8 @@ int segment_handle(char * buffer, socket_info my_socket, int flag, FILE * fp){
 		//listen for no reply within the timeout time if fin is sent again, resend and if it is not fin sent again, send reset 
 		fd_set socks;
 		struct timeval t;
-		t.tv_sec = TIME_WAIT;
-		t.tv_usec = 0;
+		t.tv_sec = 0;
+		t.tv_usec = TIME_WAIT;
 		char buff[MAX_PACKET_SIZE + 1];
 		memset(buff,0,MAX_PACKET_SIZE);
 		ssize_t recieved;
@@ -158,36 +166,40 @@ int segment_handle(char * buffer, socket_info my_socket, int flag, FILE * fp){
 				if(init == NULL){
 					continue;
 				}else if(strcmp(init->type,"FIN") != 0){
-				//NOT A FIN
-				 if(strcmp(init->type,"RST") != 0){
-					//not a ACK and not a RST so wtf is it...send reset flag
-					//create segment
-					segment reset;
-					strcpy(reset.magic,"CSC361");
-					strcpy(reset.type,"RST");
-					reset.sequence_num = 0;
-					reset.ack_num = 0;
-					reset.payload_len = 0;
-					reset.window = 0;
-					reset.data = (char *) calloc(1,sizeof(char));
-					strcpy(reset.data,"");
+					//NOT A FIN
+					 if(strcmp(init->type,"RST") != 0){
+						//not a ACK and not a RST so wtf is it...send reset flag
+						//create segment
+						segment reset;
+						strcpy(reset.magic,"CSC361");
+						strcpy(reset.type,"RST");
+						reset.sequence_num = 0;
+						reset.ack_num = 0;
+						reset.payload_len = 0;
+						reset.window = 0;
+						reset.data = (char *) calloc(1,sizeof(char));
+						strcpy(reset.data,"");
 
-					char * p = segment_to_buffer(reset);
-					free(reset.data);
-					sendto(my_socket.sock_fdesc,(void *)p,(strlen(p) + 1),0,(struct sockaddr*)&(my_socket.socket),(sizeof my_socket.socket));
-					free(p);
-				 }
+						char * p = segment_to_buffer(reset);
+						free(reset.data);
+						sendto(my_socket.sock_fdesc,(void *)p,(strlen(p) + 1),0,(struct sockaddr*)&(my_socket.socket),(sizeof my_socket.socket));
+						rec->RST_sent += 1;					
+						free(p);
+					 }else if(strcmp(init->type,"RST") == 0){
+						rec->RST_received +=1;				
+					 }
 					
-					free(init->data);
-					free(init);
-					free(my_segment->data);
-					free(my_segment);
-					fclose(fp);
-					close(my_socket.sock_fdesc);
-					fprintf(stderr,"ERROR: RESET FLAG SENT DURING CONNECTION TEARDOWN\n");
-					exit(EXIT_FAILURE);
+						free(init->data);
+						free(init);
+						free(my_segment->data);
+						free(my_segment);
+						fclose(fp);
+						close(my_socket.sock_fdesc);
+						fprintf(stderr,"ERROR: RESET FLAG SENT DURING CONNECTION TEARDOWN\n");
+						exit(EXIT_FAILURE);
 				}else{
 				//recieved another fin, lets resend ack
+					rec->FIN += 1;
 					log_segment('R',&my_socket.socket,&my_socket.socket,init);
 					log_segment('S',&my_socket.socket,&my_socket.socket,&acknowledment_seg);
 				   	sendto((my_socket.sock_fdesc),(void *)reply,(strlen(reply) + 1),0,(struct sockaddr*)&(my_socket.socket),(sizeof my_socket.socket));
@@ -233,7 +245,7 @@ gettimeofday(&tv, NULL);
 nowtime = tv.tv_sec;
 nowtm = localtime(&nowtime);
 strftime(tmbuf, 100,"%H:%M:%S", nowtm);
-fprintf(stdout, "%s.%06li %c %s:%d %s:%d %s",tmbuf,(long int)tv.tv_usec,event,inet_ntoa(sender->sin_addr),sender->sin_port,inet_ntoa(reciever->sin_addr),reciever->sin_port,packet->type);
+fprintf(stdout, "%s.%06li %c %s:%d %s:%d %s",tmbuf,(long int)tv.tv_usec,event,inet_ntoa(sender->sin_addr),htons(sender->sin_port),inet_ntoa(reciever->sin_addr),htons(reciever->sin_port),packet->type);
 strcmp(packet->type,"ACK") == 0?fprintf(stdout, " %d %d\n", packet->ack_num,packet->window):fprintf(stdout, " %d %d\n",packet->sequence_num,packet->payload_len);
 }
 
