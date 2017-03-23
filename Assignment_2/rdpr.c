@@ -13,7 +13,8 @@
 
 #include "global.h"
 log_info receiver_log;
-
+char * receiver_ip;
+int receiver_port;
 
 
 int main(int argc, char const *argv[])
@@ -35,6 +36,11 @@ int main(int argc, char const *argv[])
 	sockd.sin_addr.s_addr = inet_addr(argv[1]);
 	socklen_t socket_length = sizeof sockd; 
 	
+	receiver_ip = (char *) malloc(strlen(argv[1]) + 1);	
+	strcpy(receiver_ip,argv[1]);
+	receiver_port = port_number;
+
+
 	int option = 1;
 	//set socket option 
 	if (setsockopt(socket_udp,SOL_SOCKET,SO_REUSEADDR,&option,sizeof option) == -1){
@@ -81,9 +87,10 @@ int main(int argc, char const *argv[])
 	    socket_info my_socket;
 	    my_socket.sock_fdesc = socket_udp;
 	    my_socket.socket = sockd;
-	    my_socket.socket_length = socket_length;
+	    my_socket.socket_length = socket_length;	    
+	
 
-	    finish = segment_handle(buffer,my_socket,RECIEVER,fp,&receiver_log);   
+	    finish = segment_handle(buffer,my_socket,RECIEVER,fp,&receiver_log,receiver_ip,&receiver_port);   
 	}
 
 	struct timeval end;
@@ -91,7 +98,7 @@ int main(int argc, char const *argv[])
 	double elapsedTime;
 	elapsedTime = (end.tv_sec - start.tv_sec) * 1000.0;
 	elapsedTime += (end.tv_usec - start.tv_usec)/ 1000.0;
-
+	free(receiver_ip);
 	fclose(fp);
 	close(socket_udp);
 	fprintf(stdout,"total data bytes received: %d\n",receiver_log.total_bytes);

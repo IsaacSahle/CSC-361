@@ -54,10 +54,12 @@ sprintf(buffer,"%s %s %d %d %d %d\n\n%s",my_segment.magic,my_segment.type,my_seg
 return buffer;
 }
 
-int segment_handle(char * buffer, socket_info my_socket, int flag, FILE * fp,log_info * rec){
+int segment_handle(char * buffer, socket_info my_socket, int flag, FILE * fp,log_info * rec, char * receiver_ip, int * receiver_port){
 	//convert buffer to segment: memory is allocated REMEMBER TO FREE!
 	segment * my_segment = buffer_to_segment(buffer);
-
+	char * s_address = inet_ntoa(my_socket.socket.sin_addr);
+	int s_port = htons(my_socket.socket.sin_port); 
+	   
 	//determine what kind of packet
 	if(my_segment == NULL){
 		return 0;
@@ -72,7 +74,7 @@ int segment_handle(char * buffer, socket_info my_socket, int flag, FILE * fp,log
 		acknowledment_seg.sequence_num = 0;		
 		if(my_segment->sequence_num + 1 == request_number){			
 			//printf("length: %d\n", my_segment->payload_len);
-			log_segment('r',&my_socket.socket,&my_socket.socket,my_segment);					
+			log_segment('r',s_address,s_port,receiver_ip,*receiver_port,my_segment);					
 			request_number = request_number + my_segment->payload_len; 
 			acknowledment_seg.ack_num =request_number;	
 			fwrite(my_segment->data,sizeof(char),my_segment->payload_len,fp);
@@ -82,7 +84,7 @@ int segment_handle(char * buffer, socket_info my_socket, int flag, FILE * fp,log
 			rec->unique_packets += 1;
 		}else{
 			//duplicate or out of order segment
-			log_segment('R',&my_socket.socket,&my_socket.socket,my_segment);
+			log_segment('R',s_address,s_port,receiver_ip,*receiver_port,my_segment);
 			acknowledment_seg.ack_num =request_number;	
 			resend_ack = 1;			
 			rec->total_bytes += my_segment->payload_len;
@@ -94,7 +96,7 @@ int segment_handle(char * buffer, socket_info my_socket, int flag, FILE * fp,log
 		strcpy(acknowledment_seg.data,"");
 		char * reply = segment_to_buffer(acknowledment_seg);
 		//send acknowledgment
-		(resend_ack == 0)?log_segment('s',&my_socket.socket,&my_socket.socket,&acknowledment_seg):log_segment('S',&my_socket.socket,&my_socket.socket,&acknowledment_seg);				
+		(resend_ack == 0)?log_segment('s',receiver_ip,*receiver_port,s_address,s_port,&acknowledment_seg):log_segment('S',receiver_ip,*receiver_port,s_address,s_port,&acknowledment_seg);				
 		sendto((my_socket.sock_fdesc),(void *)reply,(strlen(reply) + 1),0,(struct sockaddr*)&(my_socket.socket),(sizeof my_socket.socket));
 		rec->ACK += 1;					
 		free(acknowledment_seg.data);
@@ -116,7 +118,7 @@ int segment_handle(char * buffer, socket_info my_socket, int flag, FILE * fp,log
 		acknowledment_seg.data = (char *) calloc(1,sizeof(char));
 		strcpy(acknowledment_seg.data,"");
 		char * reply = segment_to_buffer(acknowledment_seg);
-					(SYN_received == 0)?log_segment('r',&my_socket.socket,&my_socket.socket,my_segment):log_segment('R',&my_socket.socket,&my_socket.socket,my_segment);		
+					(SYN_received == 0)?log_segment('r',s_address,s_port,receiver_ip,*receiver_port,my_segment):log_segment('R',s_address,s_port,receiver_ip,*receiver_port,my_segment);		
 		//send acknowledgment	
 		sendto((my_socket.sock_fdesc),(void *)reply,(strlen(reply) + 1),0,(struct sockaddr*)&(my_socket.socket),(sizeof my_socket.socket));
 		rec->ACK += 1;
@@ -138,8 +140,8 @@ int segment_handle(char * buffer, socket_info my_socket, int flag, FILE * fp,log
 		strcpy(acknowledment_seg.data,"");
 		char * reply = segment_to_buffer(acknowledment_seg);
 		//send acknowledgment	
-		log_segment('r',&my_socket.socket,&my_socket.socket,my_segment);
-		log_segment('s',&my_socket.socket,&my_socket.socket,&acknowledment_seg);	
+		log_segment('r',s_address,s_port,receiver_ip,*receiver_port,my_segment);
+		log_segment('s',receiver_ip,*receiver_port,s_address,s_port,&acknowledment_seg);	
 		sendto((my_socket.sock_fdesc),(void *)reply,(strlen(reply) + 1),0,(struct sockaddr*)&(my_socket.socket),(sizeof my_socket.socket));
 		//listen for no reply within the timeout time if fin is sent again, resend and if it is not fin sent again, send reset 
 		fd_set socks;
@@ -162,11 +164,14 @@ int segment_handle(char * buffer, socket_info my_socket, int flag, FILE * fp,log
 				}
 				//resend				
 				segment * init = buffer_to_segment(buff);
+				s_address = inet_ntoa(my_socket.socket.sin_addr);
+				s_port = htons(my_socket.socket.sin_port);
 				//check for FIN 
 				if(init == NULL){
 					continue;
 				}else if(strcmp(init->type,"FIN") != 0){
 					//NOT A FIN
+					log_segment('r',s_address,s_port,receiver_ip,*receiver_port,my_segment);
 					 if(strcmp(init->type,"RST") != 0){
 						//not a ACK and not a RST so wtf is it...send reset flag
 						//create segment
@@ -200,8 +205,8 @@ int segment_handle(char * buffer, socket_info my_socket, int flag, FILE * fp,log
 				}else{
 				//recieved another fin, lets resend ack
 					rec->FIN += 1;
-					log_segment('R',&my_socket.socket,&my_socket.socket,init);
-					log_segment('S',&my_socket.socket,&my_socket.socket,&acknowledment_seg);
+					log_segment('R',s_address,s_port,receiver_ip,*receiver_port,init);
+					log_segment('S',receiver_ip,*receiver_port,s_address,s_port,&acknowledment_seg);
 				   	sendto((my_socket.sock_fdesc),(void *)reply,(strlen(reply) + 1),0,(struct sockaddr*)&(my_socket.socket),(sizeof my_socket.socket));
 				}
 
@@ -220,6 +225,7 @@ int segment_handle(char * buffer, socket_info my_socket, int flag, FILE * fp,log
 	}else if(strcmp(my_segment->type,"RST") == 0){
 	//RST: close everything and exit
 		//Free segment memory
+		log_segment('r',s_address,s_port,receiver_ip,*receiver_port,my_segment);		
 		free(my_segment->data);
 		free(my_segment);
 		fclose(fp);
@@ -234,8 +240,7 @@ int segment_handle(char * buffer, socket_info my_socket, int flag, FILE * fp,log
 	return 1;
 }
 
-void log_segment(char event, struct sockaddr_in * sender, struct sockaddr_in * reciever, segment * packet){
-
+void log_segment(char event,char * source_ip, int source_port, char * destination_ip, int destination_port, segment * packet){
 //print log message to screen
 struct timeval tv;
 time_t nowtime;
@@ -245,7 +250,7 @@ gettimeofday(&tv, NULL);
 nowtime = tv.tv_sec;
 nowtm = localtime(&nowtime);
 strftime(tmbuf, 100,"%H:%M:%S", nowtm);
-fprintf(stdout, "%s.%06li %c %s:%d %s:%d %s",tmbuf,(long int)tv.tv_usec,event,inet_ntoa(sender->sin_addr),htons(sender->sin_port),inet_ntoa(reciever->sin_addr),htons(reciever->sin_port),packet->type);
+fprintf(stdout, "%s.%06li %c %s:%d %s:%d %s",tmbuf,(long int)tv.tv_usec,event,source_ip,source_port,destination_ip,destination_port,packet->type);
 strcmp(packet->type,"ACK") == 0?fprintf(stdout, " %d %d\n", packet->ack_num,packet->window):fprintf(stdout, " %d %d\n",packet->sequence_num,packet->payload_len);
 }
 

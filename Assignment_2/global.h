@@ -52,5 +52,5 @@ typedef struct{
 
 segment * buffer_to_segment(char * buffer);
 char * segment_to_buffer(segment my_segment);
-int segment_handle(char * buffer, socket_info my_socket,int flag, FILE * fp,log_info * rec);
-void log_segment(char event, struct sockaddr_in * sender, struct sockaddr_in * reciever, segment * packet);
+int segment_handle(char * buffer, socket_info my_socket,int flag, FILE * fp,log_info * rec,char * receiver_ip, int * receiver);
+void log_segment(char event,char * source_ip, int source_port, char * destination_ip, int destination_port, segment * packet);
