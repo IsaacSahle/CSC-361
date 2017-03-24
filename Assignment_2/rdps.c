@@ -12,6 +12,7 @@
 #include <fcntl.h>
 #include <sys/time.h>
 #include <time.h>
+#include <sys/stat.h>
 #include "global.h"
 
 
@@ -160,7 +161,7 @@ int main(int argc, char const *argv[])
 			src =  inet_ntoa(sender.sin_addr);
 	    		src_port = htons(sender.sin_port);			
 			buffer[MAX_PACKET_SIZE] = '\0';	
-			segment * s = buffer_to_segment(buffer);		
+			segment * s = buffer_to_segment(buffer);			
 			log_segment('r',src,src_port,source_ip,source_port,s); 			
 			slide_window(s->ack_num);
 			sender_log.ACK += 1;			
