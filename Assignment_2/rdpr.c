@@ -83,7 +83,7 @@ int main(int argc, char const *argv[])
 	    	}
 	    
 	    buffer[MAX_PACKET_SIZE] = '\0';	
-	    //handle incoming request
+	    //handle incoming packet
 	    socket_info my_socket;
 	    my_socket.sock_fdesc = socket_udp;
 	    my_socket.socket = sockd;

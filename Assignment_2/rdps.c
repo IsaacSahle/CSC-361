@@ -15,13 +15,57 @@
 #include "global.h"
 
 
+/*
+ * Function:  size 
+ * --------------------
+ * computes current window size by traversing global queue_array
+ * 
+ * returns: the number of non NULL pointers
+ */
 int size();
+
+
+/*
+ * Function:  server_connection 
+ * --------------------
+ * Handles all connection management. Establishes a connection with client,
+ * as well as connection teardown when the file has been transfered
+ * 
+ * socket_udp: socket file descriptor
+ * socket: sockaddr_in that is used for various socket operations
+ * length: lenght of socket
+ * status: connecion status is either CONNECT or TEARDOWN
+ */
 void server_connection(int socket_udp,struct sockaddr_in socket,socklen_t length,int status);
-void slide_window(int seq_num);
+
+/*
+ * Function:  slide_window 
+ * --------------------
+ * Removes any packets currently in queue_array with a sequence number <= ack_num 
+ *
+ * ack_num: acknowledgment number 
+ */
+void slide_window(int ack_num);
+
+
+/*
+ * Function:  resend_expired_packets 
+ * --------------------
+ * Resends all packets that have timed out 
+ *
+ * current: current time
+ * socket: socket file descriptor
+ * sd: sockaddr_in that is used for various socket operations
+ * r: destination ip address (for logging)
+ * r_port: destination port number (for logging) 
+ */
 void resend_expired_packets(struct timeval * current,int socket, struct sockaddr_in sd,char * r,int r_port);
 
+//packet buffer
 queue_packet * queue_array[WINDOW_SIZE];
+//contains all log info 
 log_info sender_log;
+//flag to indicate the entire file was read
 int read_entire_file = 0;
 char * source_ip;
 char * destination_ip;
@@ -49,10 +93,10 @@ int main(int argc, char const *argv[])
 	strcpy(source_ip,argv[1]);	
 	strcpy(destination_ip,argv[3]);
 	
-	//create socket structure
+
 	struct sockaddr_in sender;
 	struct sockaddr_in reciever;
-	//set all fields
+
 	memset(&sender, 0, sizeof sender);
 	sender.sin_family = AF_INET;
 	sender.sin_port = htons(sender_port_number);
@@ -82,10 +126,15 @@ int main(int argc, char const *argv[])
 
 	char buffer[MAX_PACKET_SIZE + 1];
 	ssize_t recieved;
-	//keep trying to connect to server
-	sequence_max = MAX_PACKET_SIZE - 1;
+	
+	//begin program timer
+	struct timeval start;
+	gettimeofday(&start,NULL);
+	
+	//connect to client
 	server_connection(socket_udp,reciever,reciever_socket_length,CONNECT);
 
+	//set socket to non blocking for main execution loop
 	fcntl(socket_udp, F_SETFL, O_NONBLOCK);
 	
 	//open file
@@ -97,24 +146,21 @@ int main(int argc, char const *argv[])
 		exit(EXIT_FAILURE);
 	}
 	
-	struct timeval start;
-	gettimeofday(&start,NULL);
-
 	char * src = destination_ip;
 	int src_port = destination_port;
-		
+	
+	//Begin file transfer	
 	while(size() > 0 || !read_entire_file){
 
 		memset(buffer,0,MAX_PACKET_SIZE + 1);
 		recieved = recvfrom(socket_udp,(void*)buffer,MAX_PACKET_SIZE,0, (struct sockaddr*)&sender,&sender_socket_length);			
-		//is there data to read? 
+		//Check if ACK recieved 
 		if(recieved > 0){
 			//recieved ACK
 			src =  inet_ntoa(sender.sin_addr);
 	    		src_port = htons(sender.sin_port);			
 			buffer[MAX_PACKET_SIZE] = '\0';	
-			segment * s = buffer_to_segment(buffer);
-			//go through array (sequence num < ack num)			
+			segment * s = buffer_to_segment(buffer);		
 			log_segment('r',src,src_port,source_ip,source_port,s); 			
 			slide_window(s->ack_num);
 			sender_log.ACK += 1;			
@@ -123,9 +169,9 @@ int main(int argc, char const *argv[])
 		}
 		
 		int w_size = size();
-		//is the window size/2 full? If not fire up packet, timestamp and toss in array
+		//Recieved at least WINDOW_SIZE/2 ACKs?
 		if(w_size < WINDOW_SIZE/2 && !read_entire_file){ 			
-			//fill window!
+			//fill window
 			int i;
 			for(i = 0; i < WINDOW_SIZE;i++){
 				if(queue_array[i] == NULL && !read_entire_file){
@@ -139,8 +185,7 @@ int main(int argc, char const *argv[])
 				     storage->packet->ack_num = 0;
 				     storage->packet->window = 0;
 				     storage->packet->data = (char *) calloc(PAYLOAD_LENGTH + 1,sizeof(char));
-				     //read payloadlength bytes from the file
-				      
+				     //read payloadlength bytes from the file 
 				     char file_contents[PAYLOAD_LENGTH + 1];
 			             memset(file_contents,0,PAYLOAD_LENGTH + 1);
 				     int bytes_read = 0;
@@ -154,9 +199,7 @@ int main(int argc, char const *argv[])
 						file_contents[bytes_read] = my_char; 						
 						bytes_read++;
 				      }
-
 				     read_entire_file = (bytes_read != PAYLOAD_LENGTH)?1:0;
-				     //get rid of strag char at end of message
 				     file_contents[bytes_read] = '\0'; 
 				     storage->packet->payload_len = bytes_read;
 				     sender_sequence_number = sender_sequence_number + bytes_read;
@@ -177,19 +220,24 @@ int main(int argc, char const *argv[])
 			}			
 		}
 		
-		//remove expired packets
+		//remove timed out packets
 		struct timeval current_time;
 		gettimeofday(&current_time,NULL);
 		resend_expired_packets(&current_time,socket_udp,reciever,src,src_port); 
 	
 	}
 
+	//stop program timer
 	struct timeval end;
 	gettimeofday(&end,NULL);	
+
+	//compute time difference	
 	double elapsedTime;
 	elapsedTime = (end.tv_sec - start.tv_sec) * 1000.0;
 	elapsedTime += (end.tv_usec - start.tv_usec)/ 1000.0;
 	fclose(fp);
+	
+	//teardown connection	
 	server_connection(socket_udp,reciever,reciever_socket_length,TEARDOWN);
 	close(socket_udp);
 	free(source_ip);
@@ -210,105 +258,103 @@ int main(int argc, char const *argv[])
 
 
 void server_connection(int socket_udp,struct sockaddr_in socket,socklen_t length,int status){
-//Fire off SYN or FIN packet
-//create segment
-segment synchro;
-char buff[MAX_PACKET_SIZE + 1];
-strcpy(synchro.magic,"CSC361");
+	segment synchro;
+	char buff[MAX_PACKET_SIZE + 1];
+	strcpy(synchro.magic,"CSC361");
 
-if(status == CONNECT){
-	strcpy(synchro.type,"SYN");
-	srand(time(NULL));   // should only be called once
-	synchro.sequence_num = (rand() % 10000) + 10; //NOTE: select random sequence num > 10 (window size)
-	sender_sequence_number = synchro.sequence_num; //set global sequence
-	sequence_base = synchro.sequence_num;	
-}else{
-	strcpy(synchro.type,"FIN");
-    	synchro.sequence_num = sender_sequence_number;
-}
+	if(status == CONNECT){
+		strcpy(synchro.type,"SYN");
+		srand(time(NULL));
+		synchro.sequence_num = (rand() % 10000) + 10; 
+		//set global sequence number		
+		sender_sequence_number = synchro.sequence_num;
+		sequence_base = synchro.sequence_num;	
+	}else{
+		strcpy(synchro.type,"FIN");
+		sender_sequence_number++;
+	    	synchro.sequence_num = sender_sequence_number;
+	}
 
-synchro.ack_num = 0; //irrelevant
-synchro.payload_len = 0;
-synchro.window = 0;
-synchro.data = (char *) calloc(1,sizeof(char));
-strcpy(synchro.data,"");
+	synchro.ack_num = 0;
+	synchro.payload_len = 0;
+	synchro.window = 0;
+	synchro.data = (char *) calloc(1,sizeof(char));
+	strcpy(synchro.data,"");
 
-char * packet = segment_to_buffer(synchro);
+	char * packet = segment_to_buffer(synchro);
+	
+	log_segment('s',source_ip,source_port,destination_ip,destination_port,&synchro);
 
-log_segment('s',source_ip,source_port,destination_ip,destination_port,&synchro);
+	//Send first SYN or FIN
+	sendto(socket_udp,(void *)packet,(strlen(packet) + 1),0,(struct sockaddr*)&(socket),(length));
+	
+	//log
+	if(status == CONNECT){
+	sender_log.SYN += 1;
+	}else{
+	sender_log.FIN += 1;
+	}
 
-//printf("SENDING: %s\n",packet);
-sendto(socket_udp,(void *)packet,(strlen(packet) + 1),0,(struct sockaddr*)&(socket),(length));
+	//listen for reply and verify
+	fd_set socks;
+	struct timeval t;
+	memset(buff,0,MAX_PACKET_SIZE);
+	ssize_t recieved;
+	char * src;
+	int src_port;
+	while(1){
+		FD_ZERO(&socks);
+		FD_SET(socket_udp, &socks);
+		t.tv_sec = 0;
+		t.tv_usec = CONNECTION_TIMEOUT;
+		select(socket_udp + 1, &socks, NULL, NULL, &t);
+		src =  inet_ntoa(socket.sin_addr);
+		src_port = htons(socket.sin_port);
 
-if(status == CONNECT){
-sender_log.SYN += 1;
-}else{
-sender_log.FIN += 1;
-}
+		if (FD_ISSET(socket_udp, &socks)){
+			recieved = recvfrom(socket_udp,(void *)buff, MAX_PACKET_SIZE, 0, (struct sockaddr *)&(socket),&length);
+			if (recieved < 0) {
+		      	    fprintf(stderr, "recvfrom failed\n");
+		      	    exit(EXIT_FAILURE);
+		    	}
+		    
+			segment * init = buffer_to_segment(buff);
+			//logging purposes			
+			src =  inet_ntoa(socket.sin_addr);
+			src_port = htons(socket.sin_port);
 
-//listen for reply and confirm it.
-fd_set socks;
-struct timeval t;
-t.tv_sec = 0;
-t.tv_usec = CONNECTION_TIMEOUT;
-memset(buff,0,MAX_PACKET_SIZE);
-ssize_t recieved;
-char * src;
-int src_port;
-
-while(1){
-	FD_ZERO(&socks);
-	FD_SET(socket_udp, &socks);
-	select(socket_udp + 1, &socks, NULL, NULL, &t);
-	src =  inet_ntoa(socket.sin_addr);
-	src_port = htons(socket.sin_port);
-
-	if (FD_ISSET(socket_udp, &socks)){
-		recieved = recvfrom(socket_udp,(void *)buff, MAX_PACKET_SIZE, 0, (struct sockaddr *)&(socket),&length);
-		if (recieved < 0) {
-	      	    fprintf(stderr, "recvfrom failed\n");
-	      	    exit(EXIT_FAILURE);
-	    	}
-	    
-	    //printf("REPLY TO SYN OR FIN: %s\n",buff);
-	    segment * init = buffer_to_segment(buff);
-            src =  inet_ntoa(socket.sin_addr);
-	    src_port = htons(socket.sin_port);
-
-		//check for corrupt ACK 
-		if(init == NULL){
-			continue;
-		}else if(strcmp(init->type,"ACK") == 0 && init->ack_num == sender_sequence_number + 1){
-		//ACK:
-			log_segment('r',src,src_port,source_ip,source_port,init);
-			sender_log.ACK += 1;
-			free(init->data);
-			free(init);
-	    	break;
-		}else{
-			log_segment('r',src,src_port,source_ip,source_port,init);	
-			 if(strcmp(init->type,"RST") != 0){
-				//not a ACK and not a RST so wtf is it...send reset flag
-				//create segment
-				segment reset;
-				strcpy(reset.magic,"CSC361");
-				strcpy(reset.type,"RST");
-				reset.sequence_num = 0;
-				reset.ack_num = 0;
-				reset.payload_len = 0;
-				reset.window = 0;
-				reset.data = (char *) calloc(1,sizeof(char));
-				strcpy(reset.data,"");	
-				sender_log.RST_sent += 1;
-				char * p = segment_to_buffer(reset);
-				free(reset.data);
-				sendto(socket_udp,(void *)p,(strlen(p) + 1),0,(struct sockaddr*)&(socket),(length));
-				free(p);
-			 }else if(strcmp(init->type,"RST") == 0){
-				sender_log.RST_received += 1;
-			 }
-			
-				///close
+			//check for corrupt packet 
+			if(init == NULL){
+				continue;
+			}else if(strcmp(init->type,"ACK") == 0 && init->ack_num == sender_sequence_number + 1){
+			//correct ACK received
+				log_segment('r',src,src_port,source_ip,source_port,init);
+				sender_log.ACK += 1;
+				free(init->data);
+				free(init);
+		    	break;
+			}else{
+				log_segment('r',src,src_port,source_ip,source_port,init);	
+				if(strcmp(init->type,"RST") != 0){
+					//not a ACK and not a RST, unexpected behavour...send reset flag
+					segment reset;
+					strcpy(reset.magic,"CSC361");
+					strcpy(reset.type,"RST");
+					reset.sequence_num = 0;
+					reset.ack_num = 0;
+					reset.payload_len = 0;
+					reset.window = 0;
+					reset.data = (char *) calloc(1,sizeof(char));
+					strcpy(reset.data,"");	
+					sender_log.RST_sent += 1;
+					char * p = segment_to_buffer(reset);
+					free(reset.data);
+					sendto(socket_udp,(void *)p,(strlen(p) + 1),0,(struct sockaddr*)&(socket),(length));
+					free(p);
+				 }else if(strcmp(init->type,"RST") == 0){
+					sender_log.RST_received += 1;
+				 }
+				//close
 				free(init->data);
 				free(init);
 				free(packet);
@@ -316,74 +362,66 @@ while(1){
 				char * error;
 				fprintf(stderr,"ERROR: RESET FLAG SENT DURING %s\n",error = (status == CONNECT?"CONNECTION":"TEARDOWN"));
 				exit(EXIT_FAILURE);
+			}
+			free(init->data);
+			free(init);
 		}
 
-		free(init->data);
-		free(init);
-
+		if(status == CONNECT){
+			sender_log.SYN += 1;
+		}else{
+		   sender_log.FIN += 1;
+		}
+		//resend SYN or FIN
+		log_segment('S',source_ip,source_port,src,src_port,&synchro); 
+		sendto(socket_udp,(void *)packet,(strlen(packet) + 1),0,(struct sockaddr*)&(socket),(length));
 	}
-
-
-	if(status == CONNECT){
-		sender_log.SYN += 1;
-	}else{
-	   sender_log.FIN += 1;
-	}
-	//resend
-	log_segment('S',source_ip,source_port,src,src_port,&synchro); //resend SYN or FIN
-	sendto(socket_udp,(void *)packet,(strlen(packet) + 1),0,(struct sockaddr*)&(socket),(length));
-	
-}
-free(synchro.data);
-free(packet);
+	free(synchro.data);
+	free(packet);
 }
  
 int size(){
-    int i;
-    int count = 0;
-    for(i = 0; i < WINDOW_SIZE;i++){
+	int i;
+	int count = 0;
+	for(i = 0; i < WINDOW_SIZE;i++){
 		if(queue_array[i] != NULL){
-		count++;
+			count++;
 		}
-    }
-    return count;
+	}
+	return count;
 }
 
 void slide_window(int ack_num){
-    int i;
-    for(i = 0; i < WINDOW_SIZE;i++){
-	if(queue_array[i] != NULL && queue_array[i]->packet->sequence_num < ack_num - 1){
-		//remove from array!!
-		free(queue_array[i]->packet->data);
-		free(queue_array[i]->packet);
-		free(queue_array[i]->timestamp);
-		free(queue_array[i]);
-		queue_array[i] = NULL;
-		//w_size++;		
-	}
-     }	
+	int i;
+	for(i = 0; i < WINDOW_SIZE;i++){
+		if(queue_array[i] != NULL && queue_array[i]->packet->sequence_num < ack_num - 1){
+			//remove from array!!
+			free(queue_array[i]->packet->data);
+			free(queue_array[i]->packet);
+			free(queue_array[i]->timestamp);
+			free(queue_array[i]);
+			queue_array[i] = NULL;		
+		}
+	}	
 }
 
 //http://stackoverflow.com/questions/2150291/how-do-i-measure-a-time-interval-in-c
 void resend_expired_packets(struct timeval * current,int socket, struct sockaddr_in sd,char * r,int r_port){
-    int i;
-    for(i = 0; i < WINDOW_SIZE;i++){
-	if(queue_array[i] != NULL){
+	int i;
+	for(i = 0; i < WINDOW_SIZE;i++){
+		if(queue_array[i] != NULL){
 		//compute time diff
 		double elapsedTime;
 		elapsedTime = (current->tv_sec - queue_array[i]->timestamp->tv_sec) * 1000.0;
 		elapsedTime += (current->tv_usec - queue_array[i]->timestamp->tv_usec) / 1000.0;
-		if(elapsedTime >= PACKET_TIMEOUT){
-			//resend buffer
-			log_segment('S',source_ip,source_port,r,r_port,queue_array[i]->packet);			
-			sendto(socket,(void *)queue_array[i]->buffer,(strlen(queue_array[i]->buffer) + 1),0,(struct sockaddr*)&sd,sizeof sd);				
-			sender_log.total_bytes += queue_array[i]->packet->payload_len;
-			sender_log.total_packets += 1;			
-			//printf("RESEND VAL: %d\n",x);
-			//printf("%s\n",queue_array[i]->buffer);			
-			gettimeofday(queue_array[i]->timestamp,NULL);
+			if(elapsedTime >= PACKET_TIMEOUT){
+				//resend buffer
+				log_segment('S',source_ip,source_port,r,r_port,queue_array[i]->packet);			
+				sendto(socket,(void *)queue_array[i]->buffer,(strlen(queue_array[i]->buffer) + 1),0,(struct sockaddr*)&sd,sizeof sd);				
+				sender_log.total_bytes += queue_array[i]->packet->payload_len;
+				sender_log.total_packets += 1;						
+				gettimeofday(queue_array[i]->timestamp,NULL);
+			}
 		}
-	}
-    }		
+	}		
 }
-
