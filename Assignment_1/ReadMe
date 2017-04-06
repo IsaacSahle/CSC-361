@@ -1,0 +1,27 @@
+Isaac Sahle V00816592	B08
+
+This is my implementation of a simple UDP web server for Uvic's Networking course. To run, type the command ./sws <portnumber> <serving dir>. To exit the web server press the key 'q'.
+
+
+TESTING:
+
+To test the program, run the command make test ... and then run the test file ./Testfile.sh ...
+
+The cooresponding expected output is as follows
+
+HTTP/1.0 200 OK; followed by the contents of indext.html
+HTTP/1.0 404 Not Found; followed by no content
+HTTP/1.0 400 Bad Request; followed by no content
+HTTP/1.0 400 Bad Request; followed by no content
+HTTP/1.0 404 Not Found; followed by no content
+
+
+CODE STRUCTURE:
+
+My approach with the assignment was to ... 
+
+1. First bind the socket that my server would listen on
+2. Handle any request for information with the request_handle function
+3. Parse and check the each individual token in the request to see if it is valid
+4. After determining the request is valid, I then pass the necessary information to my build_response function
+5. In build_response I build the response buffer and send it back to the client 
